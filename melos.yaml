@@ -1,0 +1,12 @@
+name: snapspend
+packages:
+  - packages/**
+  - apps/**
+scripts:
+  test:all:
+    run: melos exec -- flutter test
+    description: Run all tests across packages and apps
+  build:mobile:
+    run: cd apps/mobile && flutter build apk
+  build:admin:
+    run: cd apps/admin && flutter build web

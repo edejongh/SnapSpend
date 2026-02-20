@@ -1,0 +1,76 @@
+# Uncomment this line to define a global platform for your project
+platform :ios, '15.5'
+
+# CocoaPods analytics sends network stats synchronously affecting flutter build latency.
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  use_frameworks!
+
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    # Xcode 26 / iOS 26 simulator requires arm64 (Rosetta for simulator was dropped).
+    # Override plugin xcconfigs that exclude arm64 — allow arm64 simulator builds.
+    target.build_configurations.each do |config|
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386'
+    end
+  end
+
+  # Patch ML Kit static frameworks for arm64 iOS Simulator compatibility.
+  # MLImage / MLKitVision / MLKitCommon / MLKitTextRecognition ship as fat static archives
+  # with arm64-iOS (device) object files. iOS 26 simulator requires arm64 but the linker
+  # rejects arm64-iOS objects when building for arm64-iOS-Simulator. We patch each .o
+  # file's LC_BUILD_VERSION in place: platform IOS(2) → IOSSIMULATOR(7).
+  patch_script = File.join(File.dirname(__FILE__), '..', 'scripts', 'patch_mlkit_sim.py')
+  mlkit_binaries = [
+    'Pods/MLImage/Frameworks/MLImage.framework/MLImage',
+    'Pods/MLKitVision/Frameworks/MLKitVision.framework/MLKitVision',
+    'Pods/MLKitCommon/Frameworks/MLKitCommon.framework/MLKitCommon',
+    'Pods/MLKitTextRecognition/Frameworks/MLKitTextRecognition.framework/MLKitTextRecognition',
+  ].map { |p| File.join(File.dirname(__FILE__), p) }.select { |p| File.exist?(p) }
+
+  unless mlkit_binaries.empty?
+    system("python3 #{patch_script} #{mlkit_binaries.map { |p| "\"#{p}\"" }.join(' ')}")
+  end
+
+  # Apply to the Runner TARGET's build configurations so it overrides the target xcconfig.
+  runner_project = Xcodeproj::Project.open(File.join(File.dirname(__FILE__), 'Runner.xcodeproj'))
+  runner_target = runner_project.targets.find { |t| t.name == 'Runner' }
+  if runner_target
+    runner_target.build_configurations.each do |config|
+      # Allow arm64 simulator (only exclude legacy i386).
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386'
+    end
+  end
+  runner_project.save
+end

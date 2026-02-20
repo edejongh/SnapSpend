@@ -1,0 +1,48 @@
+name: SnapSpend CI
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main, staging]
+
+jobs:
+  core_tests:
+    name: snapspend_core tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.x'
+      - run: cd packages/snapspend_core && flutter pub get && flutter test
+
+  mobile_build:
+    name: Mobile build check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.x'
+      - run: cd apps/mobile && flutter pub get && flutter build apk --debug
+
+  admin_build:
+    name: Admin web build check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.x'
+      - run: cd apps/admin && flutter pub get && flutter build web
+
+  functions_build:
+    name: Cloud Functions TypeScript check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cd firebase/functions && npm install && npm run build
