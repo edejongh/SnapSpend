@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/providers/auth_provider.dart';
+import 'core/providers/hive_provider.dart';
 import 'core/services/firebase_service_impl.dart';
+import 'core/services/hive_service.dart';
 import 'firebase_options.dart';
 import 'router/app_router.dart';
 import 'shared/theme/app_theme.dart';
@@ -12,11 +14,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await Hive.initFlutter();
-  // Register Hive type adapters here when generated
+  final hiveService = HiveService();
+  await hiveService.init();
   runApp(
     ProviderScope(
       overrides: [
         firebaseServiceProvider.overrideWithValue(FirebaseServiceImpl()),
+        hiveServiceProvider.overrideWithValue(hiveService),
       ],
       child: const SnapSpendApp(),
     ),

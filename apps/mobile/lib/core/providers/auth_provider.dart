@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:snapspend_core/snapspend_core.dart';
+import 'hive_provider.dart';
 
 // Watches FirebaseAuth state changes, including profile updates (displayName etc)
 final authStateProvider = StreamProvider<User?>((ref) {
@@ -95,6 +96,7 @@ class AuthNotifier extends AsyncNotifier<void> {
   Future<void> logout() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
+      await ref.read(hiveServiceProvider).clearAll();
       await FirebaseAuth.instance.signOut();
     });
   }

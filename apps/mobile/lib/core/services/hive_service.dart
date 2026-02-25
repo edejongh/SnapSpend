@@ -13,66 +13,85 @@ class HiveService {
     _budgetBox = await Hive.openBox<Map>(_budgetBoxName);
   }
 
-  // Transactions
+  // ── Transactions ────────────────────────────────────────────────────────
+
   Future<List<TransactionModel>> getAllTransactions() async {
-    final box = _requireBox(_txnBox);
+    final box = _require(_txnBox);
+    return _txnsFromBox(box);
+  }
+
+  Future<void> saveTransaction(TransactionModel txn) async {
+    await _require(_txnBox).put(txn.txnId, txn.toMap());
+  }
+
+  Future<void> deleteTransaction(String txnId) async {
+    await _require(_txnBox).delete(txnId);
+  }
+
+  Future<void> clearTransactions() async {
+    await _require(_txnBox).clear();
+  }
+
+  /// Emits the current list immediately, then re-emits on every change.
+  Stream<List<TransactionModel>> watchTransactions() async* {
+    final box = _require(_txnBox);
+    yield _txnsFromBox(box);
+    await for (final _ in box.watch()) {
+      yield _txnsFromBox(box);
+    }
+  }
+
+  List<TransactionModel> _txnsFromBox(Box<Map> box) {
     return box.values
         .map((e) => TransactionModel.fromMap(Map<String, dynamic>.from(e)))
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
   }
 
-  Future<void> saveTransaction(TransactionModel txn) async {
-    final box = _requireBox(_txnBox);
-    await box.put(txn.txnId, txn.toMap());
-  }
+  // ── Budgets ──────────────────────────────────────────────────────────────
 
-  Future<void> deleteTransaction(String txnId) async {
-    final box = _requireBox(_txnBox);
-    await box.delete(txnId);
-  }
-
-  Stream<List<TransactionModel>> watchTransactions() {
-    final box = _requireBox(_txnBox);
-    return box.watch().map(
-          (_) => box.values
-              .map(
-                (e) => TransactionModel.fromMap(
-                  Map<String, dynamic>.from(e),
-                ),
-              )
-              .toList()
-            ..sort((a, b) => b.date.compareTo(a.date)),
-        );
-  }
-
-  // Budgets
   Future<List<BudgetModel>> getAllBudgets() async {
-    final box = _requireBox(_budgetBox);
+    return _budgetsFromBox(_require(_budgetBox));
+  }
+
+  Future<void> saveBudget(BudgetModel budget) async {
+    await _require(_budgetBox).put(budget.budgetId, budget.toMap());
+  }
+
+  Future<void> deleteBudget(String budgetId) async {
+    await _require(_budgetBox).delete(budgetId);
+  }
+
+  Future<void> clearBudgets() async {
+    await _require(_budgetBox).clear();
+  }
+
+  /// Emits the current list immediately, then re-emits on every change.
+  Stream<List<BudgetModel>> watchBudgets() async* {
+    final box = _require(_budgetBox);
+    yield _budgetsFromBox(box);
+    await for (final _ in box.watch()) {
+      yield _budgetsFromBox(box);
+    }
+  }
+
+  List<BudgetModel> _budgetsFromBox(Box<Map> box) {
     return box.values
         .map((e) => BudgetModel.fromMap(Map<String, dynamic>.from(e)))
         .toList();
   }
 
-  Future<void> saveBudget(BudgetModel budget) async {
-    final box = _requireBox(_budgetBox);
-    await box.put(budget.budgetId, budget.toMap());
-  }
-
-  Future<void> deleteBudget(String budgetId) async {
-    final box = _requireBox(_budgetBox);
-    await box.delete(budgetId);
-  }
-
-  Box<Map> _requireBox(Box<Map>? box) {
-    if (box == null) {
-      throw StateError('HiveService not initialised. Call init() first.');
-    }
-    return box;
-  }
+  // ── Housekeeping ─────────────────────────────────────────────────────────
 
   Future<void> clearAll() async {
     await _txnBox?.clear();
     await _budgetBox?.clear();
+  }
+
+  Box<Map> _require(Box<Map>? box) {
+    if (box == null) {
+      throw StateError('HiveService not initialised. Call init() first.');
+    }
+    return box;
   }
 }
