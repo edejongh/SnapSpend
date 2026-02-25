@@ -99,6 +99,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const TransactionsScreen(),
       ),
       GoRoute(
+        path: '/edit-transaction',
+        builder: (context, state) {
+          final txn = state.extra as TransactionModel;
+          return ReceiptReviewScreen(existingTransaction: txn);
+        },
+      ),
+      GoRoute(
         path: '/reports',
         builder: (context, state) => const ReportsScreen(),
       ),

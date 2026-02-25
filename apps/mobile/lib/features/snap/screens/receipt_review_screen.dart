@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/currency_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
@@ -10,8 +11,13 @@ import '../../../shared/widgets/primary_button.dart';
 
 class ReceiptReviewScreen extends ConsumerStatefulWidget {
   final OcrResult? ocrResult;
+  final TransactionModel? existingTransaction;
 
-  const ReceiptReviewScreen({super.key, this.ocrResult});
+  const ReceiptReviewScreen({
+    super.key,
+    this.ocrResult,
+    this.existingTransaction,
+  });
 
   @override
   ConsumerState<ReceiptReviewScreen> createState() =>
@@ -32,19 +38,47 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
   double _rateToZAR = 1.0;
   bool _fetchingRate = false;
 
+  bool get _isEditing => widget.existingTransaction != null;
+
   @override
   void initState() {
     super.initState();
+    final txn = widget.existingTransaction;
     final ocr = widget.ocrResult;
-    _amountCtrl = TextEditingController(
-      text: ocr?.extractedAmount?.toStringAsFixed(2) ?? '',
-    );
-    _vendorCtrl = TextEditingController(text: ocr?.extractedVendor ?? '');
-    _noteCtrl = TextEditingController();
-    _selectedCurrency = AppConstants.defaultCurrency;
-    _selectedCategory = ocr?.suggestedCategory;
-    _selectedDate = ocr?.extractedDate ?? DateTime.now();
-    _isTaxDeductible = false;
+
+    // Determine default currency: existing txn > OCR > user profile > app default
+    final profileCurrency = ref
+            .read(currentUserProvider)
+            .asData
+            ?.value
+            ?.defaultCurrency ??
+        AppConstants.defaultCurrency;
+
+    if (txn != null) {
+      _amountCtrl = TextEditingController(
+        text: txn.amount.toStringAsFixed(2),
+      );
+      _vendorCtrl = TextEditingController(text: txn.vendor);
+      _noteCtrl = TextEditingController(text: txn.note ?? '');
+      _selectedCurrency = txn.currency;
+      _selectedCategory = txn.category;
+      _selectedDate = txn.date;
+      _isTaxDeductible = txn.isTaxDeductible;
+      // Derive the stored rate so the ZAR hint shows correctly immediately
+      if (txn.currency != AppConstants.defaultCurrency && txn.amount > 0) {
+        _rateToZAR = txn.amountZAR / txn.amount;
+      }
+    } else {
+      _amountCtrl = TextEditingController(
+        text: ocr?.extractedAmount?.toStringAsFixed(2) ?? '',
+      );
+      _vendorCtrl = TextEditingController(text: ocr?.extractedVendor ?? '');
+      _noteCtrl = TextEditingController();
+      _selectedCurrency = profileCurrency;
+      _selectedCategory = ocr?.suggestedCategory;
+      _selectedDate = ocr?.extractedDate ?? DateTime.now();
+      _isTaxDeductible = false;
+    }
   }
 
   @override
@@ -79,26 +113,40 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final amount = double.tryParse(_amountCtrl.text) ?? 0;
+    final existing = widget.existingTransaction;
+    final ocr = widget.ocrResult;
+    final noteText = _noteCtrl.text.trim();
+
     final txn = TransactionModel(
-      txnId: const Uuid().v4(),
+      txnId: existing?.txnId ?? const Uuid().v4(),
       amount: amount,
       currency: _selectedCurrency,
       amountZAR: amount * _rateToZAR,
       category: _selectedCategory ?? 'other',
       vendor: _vendorCtrl.text.trim(),
       date: _selectedDate,
-      note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+      note: noteText.isEmpty ? null : noteText,
       isTaxDeductible: _isTaxDeductible,
-      ocrRawText: widget.ocrResult?.rawText,
-      ocrConfidence: widget.ocrResult?.confidence,
-      source: widget.ocrResult != null ? 'ocr' : 'manual',
-      flaggedForReview:
-          (widget.ocrResult?.confidence ?? 1.0) < AppConstants.ocrFlagThreshold,
-      createdAt: DateTime.now(),
+      ocrRawText: existing?.ocrRawText ?? ocr?.rawText,
+      ocrConfidence: existing?.ocrConfidence ?? ocr?.confidence,
+      source: existing?.source ?? (ocr != null ? 'ocr' : 'manual'),
+      flaggedForReview: existing?.flaggedForReview ??
+          (ocr?.confidence ?? 1.0) < AppConstants.ocrFlagThreshold,
+      createdAt: existing?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
-    await ref.read(transactionNotifierProvider.notifier).addTransaction(txn);
-    if (mounted) context.go('/home');
+
+    if (_isEditing) {
+      await ref
+          .read(transactionNotifierProvider.notifier)
+          .updateTransaction(txn);
+      if (mounted) context.pop();
+    } else {
+      await ref
+          .read(transactionNotifierProvider.notifier)
+          .addTransaction(txn);
+      if (mounted) context.go('/home');
+    }
   }
 
   @override
@@ -109,10 +157,12 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
         ocr != null && ocr.confidence < AppConstants.ocrConfidenceThreshold;
     final isNonZAR = _selectedCurrency != AppConstants.defaultCurrency;
 
+    final title = _isEditing
+        ? 'Edit Transaction'
+        : (ocr != null ? 'Review Receipt' : 'Add Transaction');
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(ocr != null ? 'Review Receipt' : 'Add Transaction'),
-      ),
+      appBar: AppBar(title: Text(title)),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -229,7 +279,10 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
               onChanged: (v) => setState(() => _isTaxDeductible = v),
             ),
             const SizedBox(height: 24),
-            PrimaryButton(label: 'Save Transaction', onPressed: _save),
+            PrimaryButton(
+              label: _isEditing ? 'Save Changes' : 'Save Transaction',
+              onPressed: _save,
+            ),
           ],
         ),
       ),

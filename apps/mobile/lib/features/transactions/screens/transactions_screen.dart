@@ -292,6 +292,18 @@ class _TransactionDetailSheet extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push('/edit-transaction', extra: t);
+            },
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('Edit'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(40),
+            ),
+          ),
           const Divider(height: 32),
           _DetailRow(label: 'Date', value: DateFormatter.formatDate(t.date)),
           if (t.currency != 'ZAR')
