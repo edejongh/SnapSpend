@@ -127,4 +127,22 @@ class FirebaseServiceImpl implements FirebaseService {
               .toList(),
         );
   }
+
+  @override
+  Future<void> deleteUserData(String uid) async {
+    final userRef = _firestore.collection('users').doc(uid);
+
+    final txnDocs =
+        await userRef.collection('transactions').get();
+    for (final doc in txnDocs.docs) {
+      await doc.reference.delete();
+    }
+
+    final budgetDocs = await userRef.collection('budgets').get();
+    for (final doc in budgetDocs.docs) {
+      await doc.reference.delete();
+    }
+
+    await userRef.delete();
+  }
 }

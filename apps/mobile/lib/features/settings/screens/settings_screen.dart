@@ -1,8 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/hive_provider.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -56,9 +59,140 @@ class SettingsScreen extends ConsumerWidget {
               await ref.read(authNotifierProvider.notifier).logout();
             },
           ),
+          const Divider(),
+          ListTile(
+            leading: Icon(Icons.delete_forever,
+                color: Theme.of(context).colorScheme.error),
+            title: Text(
+              'Delete Account',
+              style:
+                  TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            onTap: () => _deleteAccount(context, ref),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Step 1: confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text(
+          'This will permanently delete your account and all your data. '
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+
+    // Step 2: re-authentication
+    final hasPassword =
+        user.providerData.any((p) => p.providerId == 'password');
+
+    try {
+      if (hasPassword) {
+        final passwordCtrl = TextEditingController();
+        final password = await showDialog<String>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Confirm Password'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                    'Enter your password to confirm account deletion.'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: passwordCtrl,
+                  decoration:
+                      const InputDecoration(labelText: 'Password'),
+                  obscureText: true,
+                  autofocus: true,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () =>
+                    Navigator.pop(ctx, passwordCtrl.text),
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(ctx).colorScheme.error,
+                ),
+                child: const Text('Delete my account'),
+              ),
+            ],
+          ),
+        );
+        if (password == null || password.isEmpty) return;
+        if (!context.mounted) return;
+
+        final cred = EmailAuthProvider.credential(
+          email: user.email!,
+          password: password,
+        );
+        await user.reauthenticateWithCredential(cred);
+      } else {
+        // Google re-auth
+        final googleUser = await GoogleSignIn().signIn();
+        if (googleUser == null) return;
+        final googleAuth = await googleUser.authentication;
+        final cred = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        await user.reauthenticateWithCredential(cred);
+      }
+
+      // Step 3: delete Firestore data
+      await ref
+          .read(firebaseServiceProvider)
+          .deleteUserData(user.uid);
+
+      // Step 4: clear local Hive cache
+      await ref.read(hiveServiceProvider).clearAll();
+
+      // Step 5: delete Firebase Auth account (triggers auth state change → redirect to /login)
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content:
+                Text(e.message ?? 'Failed to delete account.')),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content:
+                Text('Failed to delete account. Please try again.')),
+      );
+    }
   }
 
   Future<void> _showCurrencyPicker(
