@@ -6,6 +6,7 @@ import '../core/providers/auth_provider.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/home/screens/home_screen.dart';
+import '../features/onboarding/screens/onboarding_screen.dart';
 import '../features/snap/screens/snap_screen.dart';
 import '../features/transactions/screens/transactions_screen.dart';
 import '../features/snap/screens/receipt_review_screen.dart';
@@ -15,40 +16,52 @@ import '../features/settings/screens/profile_screen.dart';
 import '../features/settings/screens/budget_setup_screen.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 
-/// A [ChangeNotifier] that listens to Firebase auth state changes so GoRouter
-/// can refresh its redirect logic without creating a new router instance.
-class _AuthListenable extends ChangeNotifier {
-  _AuthListenable() {
-    _sub = FirebaseAuth.instance.authStateChanges().listen((_) {
-      notifyListeners();
-    });
-  }
-
-  late final dynamic _sub;
-
-  @override
-  void dispose() {
-    _sub.cancel();
-    super.dispose();
+/// Notifies GoRouter whenever auth state or Firestore user data changes,
+/// so redirect logic re-evaluates (e.g. after onboardingComplete flips).
+class _RouterNotifier extends ChangeNotifier {
+  _RouterNotifier(Ref ref) {
+    ref.listen(authStateProvider, (_, __) => notifyListeners());
+    ref.listen(currentUserProvider, (_, __) => notifyListeners());
   }
 }
 
-final _authListenable = _AuthListenable();
-
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final notifier = _RouterNotifier(ref);
+  ref.onDispose(notifier.dispose);
+
   return GoRouter(
     initialLocation: '/home',
-    refreshListenable: _authListenable,
+    refreshListenable: notifier,
     redirect: (context, state) {
       final user = FirebaseAuth.instance.currentUser;
       final isAuthenticated = user != null;
 
-      final isAuthRoute =
-          state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register';
+      final loc = state.matchedLocation;
+      final isAuthRoute = loc == '/login' || loc == '/register';
+      final isOnboardingRoute = loc == '/onboarding';
 
-      if (!isAuthenticated && !isAuthRoute) return '/login';
-      if (isAuthenticated && isAuthRoute) return '/home';
+      // Not logged in → login
+      if (!isAuthenticated) {
+        if (!isAuthRoute) return '/login';
+        return null;
+      }
+
+      // Logged in — check onboarding status
+      final userAsync = ref.read(currentUserProvider);
+
+      // Still fetching user doc — don't redirect yet
+      if (userAsync.isLoading) return null;
+
+      final onboardingComplete =
+          userAsync.asData?.value?.onboardingComplete ?? false;
+
+      if (!onboardingComplete) {
+        if (!isOnboardingRoute) return '/onboarding';
+        return null;
+      }
+
+      // Onboarding done — bounce away from auth/onboarding routes
+      if (isAuthRoute || isOnboardingRoute) return '/home';
       return null;
     },
     routes: [
@@ -59,6 +72,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         path: '/home',
