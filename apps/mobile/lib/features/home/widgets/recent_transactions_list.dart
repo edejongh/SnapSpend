@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/transaction_list_tile.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
@@ -14,11 +15,21 @@ class RecentTransactionsList extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Recent Transactions',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recent Transactions',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            if (txnsAsync.asData?.value.isNotEmpty == true)
+              TextButton(
+                onPressed: () => context.push('/transactions'),
+                child: const Text('View all'),
               ),
+          ],
         ),
         const SizedBox(height: 12),
         txnsAsync.when(
@@ -32,9 +43,9 @@ class RecentTransactionsList extends ConsumerWidget {
                 subtitle: 'Tap the camera button to scan your first receipt',
               );
             }
-            final recent = txns.take(10).toList();
             return Column(
-              children: recent
+              children: txns
+                  .take(5)
                   .map((txn) => TransactionListTile(transaction: txn))
                   .toList(),
             );
