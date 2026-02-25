@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/app_scaffold.dart';
+import '../widgets/budget_alert_banner.dart';
 import '../widgets/monthly_summary_card.dart';
 import '../widgets/budget_ring_chart.dart';
 import '../widgets/recent_transactions_list.dart';
@@ -48,6 +49,7 @@ class HomeScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
+              BudgetAlertBanner(),
               MonthlySummaryCard(),
               SizedBox(height: 20),
               BudgetRingChart(),

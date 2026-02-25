@@ -89,3 +89,17 @@ class BudgetNotifier extends AsyncNotifier<void> {
 
 final budgetNotifierProvider =
     AsyncNotifierProvider<BudgetNotifier, void>(BudgetNotifier.new);
+
+/// Budgets that have reached or exceeded their alertAt threshold.
+/// Each record is (budget, current utilisation fraction).
+final budgetAlertsProvider = Provider<List<(BudgetModel, double)>>((ref) {
+  final budgets = ref.watch(budgetsProvider).asData?.value ?? [];
+  final util = ref.watch(budgetUtilisationProvider);
+  final result = <(BudgetModel, double)>[];
+  for (final b in budgets) {
+    if (b.limitAmount <= 0) continue;
+    final pct = util[b.categoryId ?? 'overall'] ?? 0.0;
+    if (pct >= b.alertAt) result.add((b, pct));
+  }
+  return result;
+});
