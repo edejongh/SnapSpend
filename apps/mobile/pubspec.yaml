@@ -43,6 +43,8 @@ dependencies:
   uuid: ^4.3.3
   # HTTP
   dio: ^5.4.1
+  # Sharing / export
+  share_plus: ^10.0.0
 
 dev_dependencies:
   flutter_test:

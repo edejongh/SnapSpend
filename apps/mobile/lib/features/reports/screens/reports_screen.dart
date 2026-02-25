@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/reports_provider.dart';
@@ -21,7 +24,16 @@ class ReportsScreen extends ConsumerWidget {
     final txnsAsync = ref.watch(transactionsProvider);
 
     return AppScaffold(
-      appBar: AppBar(title: const Text('Reports')),
+      appBar: AppBar(
+        title: const Text('Reports'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download_outlined),
+            tooltip: 'Export CSV',
+            onPressed: () => _exportCsv(context, ref),
+          ),
+        ],
+      ),
       body: txnsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
@@ -70,6 +82,49 @@ class ReportsScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _exportCsv(BuildContext context, WidgetRef ref) async {
+    final txns = ref.read(reportTransactionsProvider);
+    if (txns.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No transactions to export')),
+      );
+      return;
+    }
+
+    final categories = ref.read(categoriesProvider);
+    final catById = {for (final c in categories) c.categoryId: c};
+
+    final buffer = StringBuffer();
+    buffer.writeln(
+        'Date,Vendor,Category,Amount,Currency,Amount (ZAR),Tax Deductible,Note,Source');
+    for (final t in txns) {
+      final catName = catById[t.category]?.name ?? t.category;
+      final note = (t.note ?? '').replaceAll(',', ';');
+      buffer.writeln(
+        '${t.date.toIso8601String().substring(0, 10)},'
+        '"${t.vendor.replaceAll('"', "'")}",'
+        '$catName,'
+        '${t.amount.toStringAsFixed(2)},'
+        '${t.currency},'
+        '${t.amountZAR.toStringAsFixed(2)},'
+        '${t.isTaxDeductible ? 'Yes' : 'No'},'
+        '$note,'
+        '${t.source}',
+      );
+    }
+
+    final period = ref.read(reportPeriodProvider).replaceAll(' ', '_');
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/snapspend_${period}_$timestamp.csv');
+    await file.writeAsString(buffer.toString());
+
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: 'text/csv')],
+      subject: 'SnapSpend Export — $period',
     );
   }
 }
