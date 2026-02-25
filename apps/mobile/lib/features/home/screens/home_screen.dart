@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/transaction_provider.dart';
 import '../widgets/monthly_summary_card.dart';
 import '../widgets/budget_ring_chart.dart';
 import '../widgets/recent_transactions_list.dart';
@@ -34,7 +35,7 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(currentUserProvider);
+          ref.invalidate(transactionsProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),

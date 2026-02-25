@@ -2,12 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import 'auth_provider.dart';
 
-// Watches transactions from Hive (offline-first)
-final transactionsProvider =
-    StreamProvider<List<TransactionModel>>((ref) async* {
-  // TODO: Wire up to HiveService once implemented
-  // For now, yields an empty list
-  yield [];
+// Watches transactions for the current user in real-time from Firestore
+final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
+  final uid = ref.watch(authStateProvider).asData?.value?.uid;
+  if (uid == null) return const Stream.empty();
+  return ref.watch(firebaseServiceProvider).watchTransactions(uid);
 });
 
 // Total spend this month
