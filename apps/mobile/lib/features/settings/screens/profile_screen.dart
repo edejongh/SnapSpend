@@ -31,6 +31,99 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     super.dispose();
   }
 
+  bool _hasPasswordProvider(User? user) {
+    return user?.providerData
+            .any((p) => p.providerId == 'password') ??
+        false;
+  }
+
+  Future<void> _changePassword(BuildContext context) async {
+    final currentCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Change Password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: currentCtrl,
+              decoration:
+                  const InputDecoration(labelText: 'Current password'),
+              obscureText: true,
+              autofocus: true,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: newCtrl,
+              decoration: const InputDecoration(labelText: 'New password'),
+              obscureText: true,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: confirmCtrl,
+              decoration:
+                  const InputDecoration(labelText: 'Confirm new password'),
+              obscureText: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Update')),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    if (newCtrl.text != confirmCtrl.text) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Passwords do not match.')),
+        );
+      }
+      return;
+    }
+    if (newCtrl.text.length < 6) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Password must be at least 6 characters.')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final user = FirebaseAuth.instance.currentUser!;
+      final cred = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentCtrl.text,
+      );
+      await user.reauthenticateWithCredential(cred);
+      await user.updatePassword(newCtrl.text);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password updated successfully.')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(e.message ?? 'Failed to update password.')),
+        );
+      }
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -150,6 +243,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     onPressed: _isSaving ? null : _save,
                     isLoading: _isSaving,
                   ),
+                  // Show password change only for email/password accounts
+                  if (_hasPasswordProvider(firebaseUser)) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.lock_outline, size: 18),
+                      label: const Text('Change Password'),
+                      onPressed: () => _changePassword(context),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

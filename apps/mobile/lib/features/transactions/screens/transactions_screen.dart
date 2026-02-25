@@ -90,21 +90,25 @@ class TransactionsScreen extends ConsumerWidget {
                   }
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: items.length,
-                  itemBuilder: (context, i) {
-                    final item = items[i];
-                    if (item is _HeaderItem) {
-                      return _DateHeader(label: item.label);
-                    }
-                    final txn = (item as _TxnItem).transaction;
-                    return _DismissibleTile(
-                      transaction: txn,
-                      onDelete: () => _confirmDelete(context, ref, txn),
-                      onTap: () => _showDetail(context, ref, txn),
-                    );
-                  },
+                return RefreshIndicator(
+                  onRefresh: () async =>
+                      ref.invalidate(transactionsProvider),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: items.length,
+                    itemBuilder: (context, i) {
+                      final item = items[i];
+                      if (item is _HeaderItem) {
+                        return _DateHeader(label: item.label);
+                      }
+                      final txn = (item as _TxnItem).transaction;
+                      return _DismissibleTile(
+                        transaction: txn,
+                        onDelete: () => _confirmDelete(context, ref, txn),
+                        onTap: () => _showDetail(context, ref, txn),
+                      );
+                    },
+                  ),
                 );
               },
             ),
