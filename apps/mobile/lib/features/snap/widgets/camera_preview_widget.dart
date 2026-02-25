@@ -1,32 +1,22 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
-/// Placeholder for a live camera preview widget.
-/// Replace with a camera plugin implementation (e.g. camera package)
-/// when native camera streaming is required.
 class CameraPreviewWidget extends StatelessWidget {
-  const CameraPreviewWidget({super.key});
+  final CameraController controller;
+
+  const CameraPreviewWidget({super.key, required this.controller});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.camera_alt_outlined,
-              size: 64,
-              color: Colors.white.withOpacity(0.4),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Camera Preview',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.4),
-              ),
-            ),
-          ],
+    return ClipRect(
+      child: SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: controller.value.previewSize?.height ?? 1,
+            height: controller.value.previewSize?.width ?? 1,
+            child: CameraPreview(controller),
+          ),
         ),
       ),
     );
