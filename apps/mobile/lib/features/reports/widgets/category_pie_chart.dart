@@ -1,16 +1,14 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/theme/app_colors.dart';
 
-class CategoryPieChart extends ConsumerWidget {
-  const CategoryPieChart({super.key});
+class CategoryPieChart extends StatelessWidget {
+  final Map<String, double> spendByCategory;
+
+  const CategoryPieChart({super.key, required this.spendByCategory});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final spendByCategory = ref.watch(spendByCategoryProvider);
-
+  Widget build(BuildContext context) {
     if (spendByCategory.isEmpty) {
       return const Center(child: Text('No data for this period'));
     }
