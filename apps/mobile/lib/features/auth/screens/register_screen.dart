@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../widgets/social_login_button.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -92,6 +93,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   label: 'Create Account',
                   onPressed: authState.isLoading ? null : _register,
                   isLoading: authState.isLoading,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('or',
+                          style: TextStyle(color: Colors.grey.shade500)),
+                    ),
+                    const Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SocialLoginButton(
+                  label: 'Continue with Google',
+                  icon: const GoogleIcon(),
+                  onPressed: authState.isLoading
+                      ? null
+                      : () => ref
+                          .read(authNotifierProvider.notifier)
+                          .googleSignIn(),
                 ),
                 const SizedBox(height: 16),
                 Center(

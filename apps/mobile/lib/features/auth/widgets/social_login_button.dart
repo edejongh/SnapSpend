@@ -1,5 +1,22 @@
 import 'package:flutter/material.dart';
 
+/// Google "G" logo rendered with Flutter primitives.
+class GoogleIcon extends StatelessWidget {
+  const GoogleIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Text(
+      'G',
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF4285F4),
+      ),
+    );
+  }
+}
+
 class SocialLoginButton extends StatelessWidget {
   final String label;
   final Widget icon;

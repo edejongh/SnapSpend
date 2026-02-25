@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 
 // Watches FirebaseAuth state changes, including profile updates (displayName etc)
@@ -101,8 +102,37 @@ class AuthNotifier extends AsyncNotifier<void> {
   Future<void> googleSignIn() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      // TODO: Implement Google Sign-In with google_sign_in package
-      throw UnimplementedError('Google Sign-In not yet implemented');
+      final googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        // User cancelled the sign-in flow
+        state = const AsyncData(null);
+        return;
+      }
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      final result =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      // Create Firestore user doc for first-time Google sign-ins
+      if (result.additionalUserInfo?.isNewUser == true) {
+        final user = result.user!;
+        final now = DateTime.now();
+        final userModel = UserModel(
+          uid: user.uid,
+          email: user.email ?? '',
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          plan: 'free',
+          defaultCurrency: AppConstants.defaultCurrency,
+          createdAt: now,
+          lastActiveAt: now,
+          onboardingComplete: false,
+        );
+        await ref.read(firebaseServiceProvider).saveUser(userModel);
+      }
     });
   }
 }

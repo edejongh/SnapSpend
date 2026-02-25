@@ -18,6 +18,8 @@ dependencies:
   go_router: ^13.0.0
   # Local storage
   hive_flutter: ^1.1.0
+  # Auth
+  google_sign_in: ^6.2.1
   # Camera & images
   camera: ^0.11.0
   image_picker: ^1.0.7
