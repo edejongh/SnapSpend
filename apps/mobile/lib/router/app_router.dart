@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,15 +14,33 @@ import '../features/settings/screens/profile_screen.dart';
 import '../features/settings/screens/budget_setup_screen.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 
-final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+/// A [ChangeNotifier] that listens to Firebase auth state changes so GoRouter
+/// can refresh its redirect logic without creating a new router instance.
+class _AuthListenable extends ChangeNotifier {
+  _AuthListenable() {
+    _sub = FirebaseAuth.instance.authStateChanges().listen((_) {
+      notifyListeners();
+    });
+  }
 
+  late final dynamic _sub;
+
+  @override
+  void dispose() {
+    _sub.cancel();
+    super.dispose();
+  }
+}
+
+final _authListenable = _AuthListenable();
+
+final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/home',
+    refreshListenable: _authListenable,
     redirect: (context, state) {
-      final isAuthenticated = authState.asData?.value != null;
-      final isLoading = authState.isLoading;
-      if (isLoading) return null;
+      final user = FirebaseAuth.instance.currentUser;
+      final isAuthenticated = user != null;
 
       final isAuthRoute =
           state.matchedLocation == '/login' ||

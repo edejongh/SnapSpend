@@ -23,6 +23,27 @@ final firebaseServiceProvider = Provider<FirebaseService>((ref) {
   );
 });
 
+String _friendlyAuthError(FirebaseAuthException e) {
+  switch (e.code) {
+    case 'user-not-found':
+    case 'wrong-password':
+    case 'invalid-credential':
+      return 'Invalid email or password.';
+    case 'email-already-in-use':
+      return 'An account with this email already exists.';
+    case 'weak-password':
+      return 'Password is too weak. Use at least 6 characters.';
+    case 'invalid-email':
+      return 'Please enter a valid email address.';
+    case 'too-many-requests':
+      return 'Too many attempts. Please try again later.';
+    case 'network-request-failed':
+      return 'Network error. Check your connection and try again.';
+    default:
+      return 'Something went wrong. Please try again.';
+  }
+}
+
 // Auth actions notifier
 class AuthNotifier extends AsyncNotifier<void> {
   @override
@@ -31,20 +52,42 @@ class AuthNotifier extends AsyncNotifier<void> {
   Future<void> login(String email, String password) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+      } on FirebaseAuthException catch (e) {
+        throw _friendlyAuthError(e);
+      }
     });
   }
 
   Future<void> register(String email, String password) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      try {
+        final credential =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        final user = credential.user!;
+        final now = DateTime.now();
+        final userModel = UserModel(
+          uid: user.uid,
+          email: email,
+          plan: 'free',
+          defaultCurrency: 'ZAR',
+          createdAt: now,
+          lastActiveAt: now,
+          onboardingComplete: false,
+        );
+        final firebaseService = ref.read(firebaseServiceProvider);
+        await firebaseService.saveUser(userModel);
+      } on FirebaseAuthException catch (e) {
+        throw _friendlyAuthError(e);
+      }
     });
   }
 
