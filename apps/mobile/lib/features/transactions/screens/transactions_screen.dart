@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
@@ -14,6 +15,11 @@ class TransactionsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('All Transactions')),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/snap/review'),
+        tooltip: 'Add transaction',
+        child: const Icon(Icons.add),
+      ),
       body: txnsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),

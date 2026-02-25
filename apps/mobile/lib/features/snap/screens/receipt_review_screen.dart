@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/providers/category_provider.dart';
+import '../../../core/providers/currency_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/primary_button.dart';
 
@@ -26,6 +27,10 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
   late String? _selectedCategory;
   late DateTime _selectedDate;
   late bool _isTaxDeductible;
+
+  /// ZAR exchange rate for the selected currency (1 <currency> = _rateToZAR ZAR).
+  double _rateToZAR = 1.0;
+  bool _fetchingRate = false;
 
   @override
   void initState() {
@@ -50,6 +55,27 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
     super.dispose();
   }
 
+  Future<void> _onCurrencyChanged(String currency) async {
+    setState(() {
+      _selectedCurrency = currency;
+      if (currency == AppConstants.defaultCurrency) {
+        _rateToZAR = 1.0;
+        _fetchingRate = false;
+      } else {
+        _fetchingRate = true;
+      }
+    });
+    if (currency == AppConstants.defaultCurrency) return;
+    try {
+      final rate = await ref
+          .read(currencyServiceProvider)
+          .convert(1.0, currency, AppConstants.defaultCurrency);
+      if (mounted) setState(() { _rateToZAR = rate; _fetchingRate = false; });
+    } catch (_) {
+      if (mounted) setState(() { _fetchingRate = false; });
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final amount = double.tryParse(_amountCtrl.text) ?? 0;
@@ -57,7 +83,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
       txnId: const Uuid().v4(),
       amount: amount,
       currency: _selectedCurrency,
-      amountZAR: amount, // TODO: Convert via CurrencyService if not ZAR
+      amountZAR: amount * _rateToZAR,
       category: _selectedCategory ?? 'other',
       vendor: _vendorCtrl.text.trim(),
       date: _selectedDate,
@@ -81,9 +107,12 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
     final categories = ref.watch(categoriesProvider);
     final lowConfidence =
         ocr != null && ocr.confidence < AppConstants.ocrConfidenceThreshold;
+    final isNonZAR = _selectedCurrency != AppConstants.defaultCurrency;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Review Receipt')),
+      appBar: AppBar(
+        title: Text(ocr != null ? 'Review Receipt' : 'Add Transaction'),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -113,6 +142,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
               ),
             // Amount + Currency row
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   flex: 2,
@@ -122,6 +152,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     validator: Validators.amount,
+                    onChanged: (_) => setState(() {}),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -135,11 +166,15 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                         )
                         .toList(),
                     onChanged: (v) =>
-                        setState(() => _selectedCurrency = v ?? 'ZAR'),
+                        _onCurrencyChanged(v ?? AppConstants.defaultCurrency),
                   ),
                 ),
               ],
             ),
+            if (isNonZAR) ...[
+              const SizedBox(height: 6),
+              _buildZarHint(),
+            ],
             const SizedBox(height: 12),
             TextFormField(
               controller: _vendorCtrl,
@@ -151,8 +186,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Date'),
-              subtitle:
-                  Text(DateFormatter.formatDate(_selectedDate)),
+              subtitle: Text(DateFormatter.formatDate(_selectedDate)),
               trailing: const Icon(Icons.calendar_today),
               onTap: () async {
                 final picked = await showDatePicker(
@@ -199,6 +233,32 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildZarHint() {
+    if (_fetchingRate) {
+      return const Row(
+        children: [
+          SizedBox(
+            width: 12,
+            height: 12,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          SizedBox(width: 8),
+          Text(
+            'Fetching exchange rate…',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      );
+    }
+    final amount = double.tryParse(_amountCtrl.text) ?? 0;
+    final zarAmount = amount * _rateToZAR;
+    return Text(
+      '≈ ${CurrencyFormatter.format(zarAmount, 'ZAR')}  '
+      '(1 $_selectedCurrency = ${CurrencyFormatter.format(_rateToZAR, 'ZAR')})',
+      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
     );
   }
 }
