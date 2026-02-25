@@ -43,24 +43,24 @@ class BudgetSetupScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             itemCount: budgets.length,
             separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, i) =>
-                _BudgetTile(budget: budgets[i]),
+            itemBuilder: (context, i) => _BudgetTile(budget: budgets[i]),
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddBudgetSheet(context, ref),
+        onPressed: () => _showBudgetSheet(context, ref),
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  void _showAddBudgetSheet(BuildContext context, WidgetRef ref) {
+  void _showBudgetSheet(BuildContext context, WidgetRef ref,
+      [BudgetModel? existing]) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => const _AddBudgetSheet(),
+      builder: (_) => _BudgetSheet(existingBudget: existing),
     );
   }
 }
@@ -82,7 +82,10 @@ class _BudgetTile extends ConsumerWidget {
       child: ListTile(
         title: Text(budget.name),
         subtitle: Text(
-            '$label · ${CurrencyFormatter.format(budget.limitAmount, 'ZAR')} / month'),
+          '$label · ${CurrencyFormatter.format(budget.limitAmount, 'ZAR')} / month'
+          ' · alert at ${(budget.alertAt * 100).toInt()}%',
+        ),
+        onTap: () => _showBudgetSheet(context, ref, budget),
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline),
           onPressed: () async {
@@ -111,21 +114,45 @@ class _BudgetTile extends ConsumerWidget {
       ),
     );
   }
+
+  void _showBudgetSheet(BuildContext context, WidgetRef ref,
+      BudgetModel existing) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _BudgetSheet(existingBudget: existing),
+    );
+  }
 }
 
-class _AddBudgetSheet extends ConsumerStatefulWidget {
-  const _AddBudgetSheet();
+class _BudgetSheet extends ConsumerStatefulWidget {
+  final BudgetModel? existingBudget;
+  const _BudgetSheet({this.existingBudget});
 
   @override
-  ConsumerState<_AddBudgetSheet> createState() => _AddBudgetSheetState();
+  ConsumerState<_BudgetSheet> createState() => _BudgetSheetState();
 }
 
-class _AddBudgetSheetState extends ConsumerState<_AddBudgetSheet> {
+class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController();
-  final _limitCtrl = TextEditingController();
-  String? _selectedCategoryId; // null = overall
-  double _alertAt = 0.8;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _limitCtrl;
+  late String? _selectedCategoryId;
+  late double _alertAt;
+
+  bool get _isEditing => widget.existingBudget != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final b = widget.existingBudget;
+    _nameCtrl = TextEditingController(text: b?.name ?? '');
+    _limitCtrl = TextEditingController(
+        text: b != null ? b.limitAmount.toStringAsFixed(2) : '');
+    _selectedCategoryId = b?.categoryId;
+    _alertAt = b?.alertAt ?? 0.8;
+  }
 
   @override
   void dispose() {
@@ -136,16 +163,21 @@ class _AddBudgetSheetState extends ConsumerState<_AddBudgetSheet> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final existing = widget.existingBudget;
     final budget = BudgetModel(
-      budgetId: const Uuid().v4(),
+      budgetId: existing?.budgetId ?? const Uuid().v4(),
       name: _nameCtrl.text.trim(),
       limitAmount: double.parse(_limitCtrl.text),
       period: 'monthly',
       categoryId: _selectedCategoryId,
       alertAt: _alertAt,
-      createdAt: DateTime.now(),
+      createdAt: existing?.createdAt ?? DateTime.now(),
     );
-    await ref.read(budgetNotifierProvider.notifier).addBudget(budget);
+    if (_isEditing) {
+      await ref.read(budgetNotifierProvider.notifier).updateBudget(budget);
+    } else {
+      await ref.read(budgetNotifierProvider.notifier).addBudget(budget);
+    }
     if (mounted) Navigator.pop(context);
   }
 
@@ -163,11 +195,13 @@ class _AddBudgetSheetState extends ConsumerState<_AddBudgetSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Add Budget',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              _isEditing ? 'Edit Budget' : 'Add Budget',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 20),
             TextFormField(
               controller: _nameCtrl,
@@ -179,8 +213,7 @@ class _AddBudgetSheetState extends ConsumerState<_AddBudgetSheet> {
             TextFormField(
               controller: _limitCtrl,
               decoration: const InputDecoration(
-                  labelText: 'Monthly limit (ZAR)',
-                  prefixText: 'R '),
+                  labelText: 'Monthly limit (ZAR)', prefixText: 'R '),
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               validator: Validators.amount,
@@ -193,8 +226,7 @@ class _AddBudgetSheetState extends ConsumerState<_AddBudgetSheet> {
                 const DropdownMenuItem(
                     value: null, child: Text('Overall (all spending)')),
                 ...categories.map((c) => DropdownMenuItem(
-                    value: c.categoryId,
-                    child: Text('${c.icon} ${c.name}'))),
+                    value: c.categoryId, child: Text('${c.icon} ${c.name}'))),
               ],
               onChanged: (v) => setState(() => _selectedCategoryId = v),
             ),
@@ -223,7 +255,7 @@ class _AddBudgetSheetState extends ConsumerState<_AddBudgetSheet> {
                         color: Theme.of(context).colorScheme.error)),
               ),
             PrimaryButton(
-              label: 'Save Budget',
+              label: _isEditing ? 'Save Changes' : 'Save Budget',
               onPressed: notifierState.isLoading ? null : _save,
               isLoading: notifierState.isLoading,
             ),
