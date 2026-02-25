@@ -11,9 +11,14 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userAsync = ref.watch(currentUserProvider);
+    final userAsync = ref.watch(authStateProvider);
     final greeting = _greeting();
-    final displayName = userAsync.asData?.value?.displayName ?? 'there';
+    final firebaseUser = userAsync.asData?.value;
+    final rawName = firebaseUser?.displayName ??
+        firebaseUser?.email?.split('@').first ??
+        'there';
+    final displayName =
+        rawName[0].toUpperCase() + rawName.substring(1);
 
     return Scaffold(
       appBar: AppBar(
