@@ -21,5 +21,9 @@ abstract class FirebaseService {
 
   Future<void> saveBudget(String uid, BudgetModel budget);
 
+  Future<void> deleteBudget(String uid, String budgetId);
+
   Stream<List<TransactionModel>> watchTransactions(String uid);
+
+  Stream<List<BudgetModel>> watchBudgets(String uid);
 }

@@ -90,6 +90,16 @@ class FirebaseServiceImpl implements FirebaseService {
   }
 
   @override
+  Future<void> deleteBudget(String uid, String budgetId) async {
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('budgets')
+        .doc(budgetId)
+        .delete();
+  }
+
+  @override
   Stream<List<TransactionModel>> watchTransactions(String uid) {
     return _firestore
         .collection('users')
@@ -99,11 +109,21 @@ class FirebaseServiceImpl implements FirebaseService {
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-              .map(
-                (doc) => TransactionModel.fromMap(
-                  doc.data(),
-                ),
-              )
+              .map((doc) => TransactionModel.fromMap(doc.data()))
+              .toList(),
+        );
+  }
+
+  @override
+  Stream<List<BudgetModel>> watchBudgets(String uid) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('budgets')
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => BudgetModel.fromMap(doc.data()))
               .toList(),
         );
   }
