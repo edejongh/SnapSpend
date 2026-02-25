@@ -6,12 +6,16 @@ import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 
+// Search query state — scoped to this screen via autoDispose
+final _txnSearchProvider = StateProvider.autoDispose<String>((ref) => '');
+
 class TransactionsScreen extends ConsumerWidget {
   const TransactionsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final txnsAsync = ref.watch(transactionsProvider);
+    final query = ref.watch(_txnSearchProvider).toLowerCase();
 
     return Scaffold(
       appBar: AppBar(title: const Text('All Transactions')),
@@ -20,51 +24,92 @@ class TransactionsScreen extends ConsumerWidget {
         tooltip: 'Add transaction',
         child: const Icon(Icons.add),
       ),
-      body: txnsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (txns) {
-          if (txns.isEmpty) {
-            return const EmptyStateWidget(
-              icon: Icons.receipt_long_outlined,
-              title: 'No transactions yet',
-              subtitle: 'Tap the camera button to scan your first receipt',
-            );
-          }
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search transactions…',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                contentPadding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 16),
+                suffixIcon: query.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () =>
+                            ref.read(_txnSearchProvider.notifier).state = '',
+                      )
+                    : null,
+              ),
+              onChanged: (v) =>
+                  ref.read(_txnSearchProvider.notifier).state = v,
+            ),
+          ),
+          Expanded(
+            child: txnsAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+              data: (allTxns) {
+                final txns = query.isEmpty
+                    ? allTxns
+                    : allTxns.where((t) {
+                        return t.vendor.toLowerCase().contains(query) ||
+                            t.category.toLowerCase().contains(query) ||
+                            (t.note?.toLowerCase().contains(query) ?? false);
+                      }).toList();
 
-          // Group transactions by date (year/month/day)
-          final groups = <String, List<TransactionModel>>{};
-          for (final txn in txns) {
-            final key = _dateKey(txn.date);
-            groups.putIfAbsent(key, () => []).add(txn);
-          }
+                if (txns.isEmpty) {
+                  return query.isNotEmpty
+                      ? Center(
+                          child: Text(
+                            'No results for "$query"',
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      : const EmptyStateWidget(
+                          icon: Icons.receipt_long_outlined,
+                          title: 'No transactions yet',
+                          subtitle:
+                              'Tap the camera button to scan your first receipt',
+                        );
+                }
 
-          // Build flat list: [header, tile, tile, header, tile, ...]
-          final items = <_ListItem>[];
-          for (final entry in groups.entries) {
-            items.add(_HeaderItem(entry.key));
-            for (final txn in entry.value) {
-              items.add(_TxnItem(txn));
-            }
-          }
+                // Group by date
+                final groups = <String, List<TransactionModel>>{};
+                for (final txn in txns) {
+                  groups.putIfAbsent(_dateKey(txn.date), () => []).add(txn);
+                }
 
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: items.length,
-            itemBuilder: (context, i) {
-              final item = items[i];
-              if (item is _HeaderItem) {
-                return _DateHeader(label: item.label);
-              }
-              final txn = (item as _TxnItem).transaction;
-              return _DismissibleTile(
-                transaction: txn,
-                onDelete: () => _confirmDelete(context, ref, txn),
-                onTap: () => _showDetail(context, ref, txn),
-              );
-            },
-          );
-        },
+                final items = <_ListItem>[];
+                for (final entry in groups.entries) {
+                  items.add(_HeaderItem(entry.key));
+                  for (final txn in entry.value) {
+                    items.add(_TxnItem(txn));
+                  }
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: items.length,
+                  itemBuilder: (context, i) {
+                    final item = items[i];
+                    if (item is _HeaderItem) {
+                      return _DateHeader(label: item.label);
+                    }
+                    final txn = (item as _TxnItem).transaction;
+                    return _DismissibleTile(
+                      transaction: txn,
+                      onDelete: () => _confirmDelete(context, ref, txn),
+                      onTap: () => _showDetail(context, ref, txn),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -312,7 +357,8 @@ class _TransactionDetailSheet extends ConsumerWidget {
                 value:
                     '${CurrencyFormatter.format(t.amount, t.currency)} ${t.currency}'),
           _DetailRow(
-              label: 'Source', value: t.source == 'ocr' ? 'Scanned receipt' : 'Manual entry'),
+              label: 'Source',
+              value: t.source == 'ocr' ? 'Scanned receipt' : 'Manual entry'),
           if (t.ocrConfidence != null)
             _DetailRow(
                 label: 'OCR confidence',
@@ -365,7 +411,8 @@ class _DetailRow extends StatelessWidget {
           ),
           Expanded(
             child: Text(value,
-                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                style: const TextStyle(
+                    fontWeight: FontWeight.w500, fontSize: 14)),
           ),
         ],
       ),

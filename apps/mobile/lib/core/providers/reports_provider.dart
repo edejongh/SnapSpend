@@ -82,6 +82,23 @@ final reportSpendByMonthProvider = Provider<Map<String, double>>((ref) {
   return map;
 });
 
+/// Total tax-deductible spend in the selected period.
+final reportTaxDeductibleProvider = Provider<double>((ref) {
+  return ref
+      .watch(reportTransactionsProvider)
+      .where((t) => t.isTaxDeductible)
+      .fold(0.0, (sum, t) => sum + t.amountZAR);
+});
+
+/// Tax-deductible transactions in the selected period, sorted newest first.
+final reportTaxTransactionsProvider =
+    Provider<List<TransactionModel>>((ref) {
+  return ref
+      .watch(reportTransactionsProvider)
+      .where((t) => t.isTaxDeductible)
+      .toList();
+});
+
 String _monthLabel(DateTime date) {
   const abbr = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',

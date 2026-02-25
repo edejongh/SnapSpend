@@ -21,6 +21,8 @@ class ReportsScreen extends ConsumerWidget {
     final total = ref.watch(reportTotalProvider);
     final spendByCategory = ref.watch(reportSpendByCategoryProvider);
     final spendByMonth = ref.watch(reportSpendByMonthProvider);
+    final taxTotal = ref.watch(reportTaxDeductibleProvider);
+    final taxTxns = ref.watch(reportTaxTransactionsProvider);
     final txnsAsync = ref.watch(transactionsProvider);
 
     return AppScaffold(
@@ -79,6 +81,10 @@ class ReportsScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+            if (taxTotal > 0) ...[
+              const SizedBox(height: 16),
+              _TaxSummaryCard(total: taxTotal, transactions: taxTxns),
+            ],
           ],
         ),
       ),
@@ -271,6 +277,85 @@ class _CategoryBreakdown extends ConsumerWidget {
                           ),
                         ],
                       ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TaxSummaryCard extends ConsumerWidget {
+  final double total;
+  final List<TransactionModel> transactions;
+
+  const _TaxSummaryCard({
+    required this.total,
+    required this.transactions,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.receipt_long_outlined,
+                    size: 18, color: Colors.green),
+                const SizedBox(width: 8),
+                Text(
+                  'Tax Deductible',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                Text(
+                  CurrencyFormatter.format(total, 'ZAR'),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...transactions.map((t) {
+              final category = ref.watch(categoryByIdProvider(t.category));
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Text(category?.icon ?? '📋'),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(t.vendor,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w500)),
+                          Text(
+                            DateFormatter.formatDate(t.date),
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      CurrencyFormatter.format(t.amountZAR, 'ZAR'),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
