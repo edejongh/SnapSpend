@@ -2,9 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 
-// Watches FirebaseAuth state changes
+// Watches FirebaseAuth state changes, including profile updates (displayName etc)
 final authStateProvider = StreamProvider<User?>((ref) {
-  return FirebaseAuth.instance.authStateChanges();
+  return FirebaseAuth.instance.userChanges();
 });
 
 // Fetches the current UserModel from Firestore

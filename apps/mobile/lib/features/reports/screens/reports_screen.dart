@@ -4,6 +4,7 @@ import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/reports_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
+import '../../../shared/widgets/app_scaffold.dart';
 import '../widgets/category_pie_chart.dart';
 import '../widgets/filter_bar.dart';
 import '../widgets/spending_bar_chart.dart';
@@ -19,7 +20,7 @@ class ReportsScreen extends ConsumerWidget {
     final spendByMonth = ref.watch(reportSpendByMonthProvider);
     final txnsAsync = ref.watch(transactionsProvider);
 
-    return Scaffold(
+    return AppScaffold(
       appBar: AppBar(title: const Text('Reports')),
       body: txnsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
