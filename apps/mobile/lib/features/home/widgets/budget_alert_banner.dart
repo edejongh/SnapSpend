@@ -22,7 +22,7 @@ class BudgetAlertBanner extends ConsumerWidget {
 }
 
 class _AlertTile extends StatelessWidget {
-  final budget;
+  final BudgetModel budget;
   final double utilisation;
 
   const _AlertTile({required this.budget, required this.utilisation});

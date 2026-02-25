@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 import '../../../core/providers/budget_provider.dart';
@@ -95,7 +96,7 @@ class _NotificationBell extends ConsumerWidget {
   }
 
   void _showAlerts(
-      BuildContext context, List<(dynamic, double)> alerts) {
+      BuildContext context, List<(BudgetModel, double)> alerts) {
     showModalBottomSheet(
       context: context,
       useSafeArea: true,
@@ -105,7 +106,7 @@ class _NotificationBell extends ConsumerWidget {
 }
 
 class _AlertsSheet extends StatelessWidget {
-  final List<(dynamic, double)> alerts;
+  final List<(BudgetModel, double)> alerts;
   const _AlertsSheet({required this.alerts});
 
   @override
@@ -157,7 +158,7 @@ class _AlertsSheet extends StatelessWidget {
 }
 
 class _AlertRow extends StatelessWidget {
-  final dynamic budget;
+  final BudgetModel budget;
   final double utilisation;
   const _AlertRow({required this.budget, required this.utilisation});
 
