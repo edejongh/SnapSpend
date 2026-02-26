@@ -7,10 +7,25 @@ import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 
-// Search and filter state — scoped to this screen via autoDispose
+// Search, filter and sort state — scoped to this screen via autoDispose
 final _txnSearchProvider = StateProvider.autoDispose<String>((ref) => '');
 final _txnCategoryFilterProvider =
     StateProvider.autoDispose<String?>((ref) => null);
+
+enum _TxnSort { newest, oldest, amountDesc, amountAsc, vendor }
+
+extension _TxnSortLabel on _TxnSort {
+  String get label => switch (this) {
+        _TxnSort.newest => 'Newest first',
+        _TxnSort.oldest => 'Oldest first',
+        _TxnSort.amountDesc => 'Highest amount',
+        _TxnSort.amountAsc => 'Lowest amount',
+        _TxnSort.vendor => 'Vendor A–Z',
+      };
+}
+
+final _txnSortProvider =
+    StateProvider.autoDispose<_TxnSort>((ref) => _TxnSort.newest);
 
 class TransactionsScreen extends ConsumerWidget {
   const TransactionsScreen({super.key});
@@ -21,9 +36,36 @@ class TransactionsScreen extends ConsumerWidget {
     final query = ref.watch(_txnSearchProvider).toLowerCase();
     final categoryFilter = ref.watch(_txnCategoryFilterProvider);
     final categories = ref.watch(categoriesProvider);
+    final sort = ref.watch(_txnSortProvider);
 
     return AppScaffold(
-      appBar: AppBar(title: const Text('Transactions')),
+      appBar: AppBar(
+        title: const Text('Transactions'),
+        actions: [
+          PopupMenuButton<_TxnSort>(
+            icon: const Icon(Icons.sort),
+            tooltip: 'Sort',
+            initialValue: sort,
+            onSelected: (s) =>
+                ref.read(_txnSortProvider.notifier).state = s,
+            itemBuilder: (_) => _TxnSort.values
+                .map((s) => PopupMenuItem(
+                      value: s,
+                      child: Row(
+                        children: [
+                          if (s == sort)
+                            const Icon(Icons.check, size: 18)
+                          else
+                            const SizedBox(width: 18),
+                          const SizedBox(width: 8),
+                          Text(s.label),
+                        ],
+                      ),
+                    ))
+                .toList(),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/snap/review'),
         tooltip: 'Add transaction',
@@ -103,6 +145,22 @@ class TransactionsScreen extends ConsumerWidget {
                         t.category.toLowerCase().contains(query) ||
                         (t.note?.toLowerCase().contains(query) ?? false);
                   }).toList();
+                }
+
+                // Apply sort
+                txns = List.of(txns);
+                switch (sort) {
+                  case _TxnSort.newest:
+                    txns.sort((a, b) => b.date.compareTo(a.date));
+                  case _TxnSort.oldest:
+                    txns.sort((a, b) => a.date.compareTo(b.date));
+                  case _TxnSort.amountDesc:
+                    txns.sort((a, b) => b.amountZAR.compareTo(a.amountZAR));
+                  case _TxnSort.amountAsc:
+                    txns.sort((a, b) => a.amountZAR.compareTo(b.amountZAR));
+                  case _TxnSort.vendor:
+                    txns.sort((a, b) =>
+                        a.vendor.toLowerCase().compareTo(b.vendor.toLowerCase()));
                 }
 
                 if (txns.isEmpty) {
@@ -401,19 +459,40 @@ class _TransactionDetailSheet extends ConsumerWidget {
           ),
           if (t.receiptStoragePath != null) ...[
             const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                t.receiptStoragePath!,
-                fit: BoxFit.contain,
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return const SizedBox(
-                    height: 160,
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                },
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  fullscreenDialog: true,
+                  builder: (_) =>
+                      _ReceiptViewer(url: t.receiptStoragePath!),
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Hero(
+                  tag: 'receipt_${t.txnId}',
+                  child: Image.network(
+                    t.receiptStoragePath!,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return const SizedBox(
+                        height: 160,
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Tap to zoom',
+                style: TextStyle(
+                    fontSize: 11, color: Colors.grey.shade500),
               ),
             ),
           ],
@@ -455,6 +534,47 @@ class _TransactionDetailSheet extends ConsumerWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Full-screen receipt viewer ────────────────────────────────────────────────
+
+class _ReceiptViewer extends StatelessWidget {
+  final String url;
+  const _ReceiptViewer({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        title: const Text('Receipt'),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          minScale: 0.5,
+          maxScale: 5.0,
+          child: Hero(
+            tag: url,
+            child: Image.network(
+              url,
+              fit: BoxFit.contain,
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return const CircularProgressIndicator(color: Colors.white);
+              },
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.broken_image_outlined,
+                color: Colors.white54,
+                size: 64,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import 'auth_provider.dart';
@@ -123,6 +124,15 @@ class TransactionNotifier extends AsyncNotifier<void> {
         'data': txn.toMap(),
       });
     }
+    FirebaseAnalytics.instance.logEvent(
+      name: 'transaction_added',
+      parameters: {
+        'source': txn.source,
+        'currency': txn.currency,
+        'category': txn.category,
+        'is_tax_deductible': txn.isTaxDeductible.toString(),
+      },
+    );
   }
 
   Future<void> updateTransaction(TransactionModel txn) async {
@@ -159,6 +169,8 @@ class TransactionNotifier extends AsyncNotifier<void> {
         'id': txnId,
       });
     }
+    FirebaseAnalytics.instance
+        .logEvent(name: 'transaction_deleted');
   }
 }
 

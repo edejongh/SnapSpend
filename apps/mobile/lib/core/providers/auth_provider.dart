@@ -1,3 +1,4 @@
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -61,6 +62,7 @@ class AuthNotifier extends AsyncNotifier<void> {
           password: password,
         );
         await _registerFcmToken();
+        await FirebaseAnalytics.instance.logLogin(loginMethod: 'email');
       } on FirebaseAuthException catch (e) {
         throw _friendlyAuthError(e);
       }
@@ -90,6 +92,7 @@ class AuthNotifier extends AsyncNotifier<void> {
         final firebaseService = ref.read(firebaseServiceProvider);
         await firebaseService.saveUser(userModel);
         await _registerFcmToken();
+        await FirebaseAnalytics.instance.logSignUp(signUpMethod: 'email');
       } on FirebaseAuthException catch (e) {
         throw _friendlyAuthError(e);
       }
@@ -152,6 +155,7 @@ class AuthNotifier extends AsyncNotifier<void> {
         await ref.read(firebaseServiceProvider).saveUser(userModel);
       }
       await _registerFcmToken();
+      await FirebaseAnalytics.instance.logLogin(loginMethod: 'google');
     });
   }
 }

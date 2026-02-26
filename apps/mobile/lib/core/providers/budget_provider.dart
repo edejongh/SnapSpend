@@ -1,3 +1,4 @@
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import 'auth_provider.dart';
@@ -84,6 +85,13 @@ class BudgetNotifier extends AsyncNotifier<void> {
         'data': budget.toMap(),
       });
     }
+    FirebaseAnalytics.instance.logEvent(
+      name: 'budget_created',
+      parameters: {
+        'has_category': (budget.categoryId != null).toString(),
+        'alert_at': (budget.alertAt * 100).toInt().toString(),
+      },
+    );
   }
 
   Future<void> updateBudget(BudgetModel budget) async {
