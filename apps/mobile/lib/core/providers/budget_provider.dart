@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import 'auth_provider.dart';
 import 'hive_provider.dart';
+import 'sync_provider.dart';
 import 'transaction_provider.dart';
 
 /// Reads from Hive (instant, offline-first).
@@ -23,8 +24,19 @@ final budgetsProvider = StreamProvider<List<BudgetModel>>((ref) {
     for (final budget in incoming) {
       await hive.saveBudget(budget);
     }
+
+    // Skip deleting budgets that are pending a Firestore write
+    final pendingOps = await hive.getPendingOps();
+    final pendingSaveIds = pendingOps.values
+        .where((op) => op['type'] == 'saveBudget')
+        .map((op) =>
+            Map<String, dynamic>.from(op['data'] as Map)['budgetId'] as String)
+        .toSet();
+
     for (final id in existingIds.difference(incomingIds)) {
-      await hive.deleteBudget(id);
+      if (!pendingSaveIds.contains(id)) {
+        await hive.deleteBudget(id);
+      }
     }
   });
   ref.onDispose(sub.cancel);
@@ -57,33 +69,57 @@ class BudgetNotifier extends AsyncNotifier<void> {
   Future<void> build() async {}
 
   Future<void> addBudget(BudgetModel budget) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final uid = ref.read(authStateProvider).asData?.value?.uid;
-      if (uid == null) throw Exception('Not authenticated');
-      await ref.read(hiveServiceProvider).saveBudget(budget);
+    final uid = ref.read(authStateProvider).asData?.value?.uid;
+    if (uid == null) {
+      state = AsyncError('Not authenticated', StackTrace.current);
+      return;
+    }
+    await ref.read(hiveServiceProvider).saveBudget(budget);
+    state = const AsyncData(null);
+    try {
       await ref.read(firebaseServiceProvider).saveBudget(uid, budget);
-    });
+    } catch (_) {
+      await ref.read(syncServiceProvider).enqueuePendingOperation({
+        'type': 'saveBudget',
+        'data': budget.toMap(),
+      });
+    }
   }
 
   Future<void> updateBudget(BudgetModel budget) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final uid = ref.read(authStateProvider).asData?.value?.uid;
-      if (uid == null) throw Exception('Not authenticated');
-      await ref.read(hiveServiceProvider).saveBudget(budget);
+    final uid = ref.read(authStateProvider).asData?.value?.uid;
+    if (uid == null) {
+      state = AsyncError('Not authenticated', StackTrace.current);
+      return;
+    }
+    await ref.read(hiveServiceProvider).saveBudget(budget);
+    state = const AsyncData(null);
+    try {
       await ref.read(firebaseServiceProvider).saveBudget(uid, budget);
-    });
+    } catch (_) {
+      await ref.read(syncServiceProvider).enqueuePendingOperation({
+        'type': 'saveBudget',
+        'data': budget.toMap(),
+      });
+    }
   }
 
   Future<void> deleteBudget(String budgetId) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final uid = ref.read(authStateProvider).asData?.value?.uid;
-      if (uid == null) throw Exception('Not authenticated');
-      await ref.read(hiveServiceProvider).deleteBudget(budgetId);
+    final uid = ref.read(authStateProvider).asData?.value?.uid;
+    if (uid == null) {
+      state = AsyncError('Not authenticated', StackTrace.current);
+      return;
+    }
+    await ref.read(hiveServiceProvider).deleteBudget(budgetId);
+    state = const AsyncData(null);
+    try {
       await ref.read(firebaseServiceProvider).deleteBudget(uid, budgetId);
-    });
+    } catch (_) {
+      await ref.read(syncServiceProvider).enqueuePendingOperation({
+        'type': 'deleteBudget',
+        'id': budgetId,
+      });
+    }
   }
 }
 

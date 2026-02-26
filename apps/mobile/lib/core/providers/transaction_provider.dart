@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import 'auth_provider.dart';
 import 'hive_provider.dart';
+import 'sync_provider.dart';
 
 /// Reads from Hive (instant, offline-first).
 /// Simultaneously subscribes to the Firestore stream and diff-syncs
@@ -22,8 +23,20 @@ final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
     for (final txn in incoming) {
       await hive.saveTransaction(txn);
     }
+
+    // Don't delete transactions that are pending a Firestore write —
+    // they exist in Hive only because the write hasn't been replayed yet.
+    final pendingOps = await hive.getPendingOps();
+    final pendingSaveIds = pendingOps.values
+        .where((op) => op['type'] == 'saveTransaction')
+        .map((op) =>
+            Map<String, dynamic>.from(op['data'] as Map)['txnId'] as String)
+        .toSet();
+
     for (final id in existingIds.difference(incomingIds)) {
-      await hive.deleteTransaction(id);
+      if (!pendingSaveIds.contains(id)) {
+        await hive.deleteTransaction(id);
+      }
     }
   });
   ref.onDispose(sub.cancel);
@@ -59,34 +72,59 @@ class TransactionNotifier extends AsyncNotifier<void> {
   Future<void> build() async {}
 
   Future<void> addTransaction(TransactionModel txn) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final uid = ref.read(authStateProvider).asData?.value?.uid;
-      if (uid == null) throw Exception('Not authenticated');
-      // Write to Hive immediately (optimistic) then Firestore
-      await ref.read(hiveServiceProvider).saveTransaction(txn);
+    final uid = ref.read(authStateProvider).asData?.value?.uid;
+    if (uid == null) {
+      state = AsyncError('Not authenticated', StackTrace.current);
+      return;
+    }
+    // Write to Hive immediately — UI updates reactively
+    await ref.read(hiveServiceProvider).saveTransaction(txn);
+    state = const AsyncData(null);
+    // Push to Firestore; enqueue for later replay if offline
+    try {
       await ref.read(firebaseServiceProvider).saveTransaction(uid, txn);
-    });
+    } catch (_) {
+      await ref.read(syncServiceProvider).enqueuePendingOperation({
+        'type': 'saveTransaction',
+        'data': txn.toMap(),
+      });
+    }
   }
 
   Future<void> updateTransaction(TransactionModel txn) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final uid = ref.read(authStateProvider).asData?.value?.uid;
-      if (uid == null) throw Exception('Not authenticated');
-      await ref.read(hiveServiceProvider).saveTransaction(txn);
+    final uid = ref.read(authStateProvider).asData?.value?.uid;
+    if (uid == null) {
+      state = AsyncError('Not authenticated', StackTrace.current);
+      return;
+    }
+    await ref.read(hiveServiceProvider).saveTransaction(txn);
+    state = const AsyncData(null);
+    try {
       await ref.read(firebaseServiceProvider).saveTransaction(uid, txn);
-    });
+    } catch (_) {
+      await ref.read(syncServiceProvider).enqueuePendingOperation({
+        'type': 'saveTransaction',
+        'data': txn.toMap(),
+      });
+    }
   }
 
   Future<void> deleteTransaction(String txnId) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final uid = ref.read(authStateProvider).asData?.value?.uid;
-      if (uid == null) throw Exception('Not authenticated');
-      await ref.read(hiveServiceProvider).deleteTransaction(txnId);
+    final uid = ref.read(authStateProvider).asData?.value?.uid;
+    if (uid == null) {
+      state = AsyncError('Not authenticated', StackTrace.current);
+      return;
+    }
+    await ref.read(hiveServiceProvider).deleteTransaction(txnId);
+    state = const AsyncData(null);
+    try {
       await ref.read(firebaseServiceProvider).deleteTransaction(uid, txnId);
-    });
+    } catch (_) {
+      await ref.read(syncServiceProvider).enqueuePendingOperation({
+        'type': 'deleteTransaction',
+        'id': txnId,
+      });
+    }
   }
 }
 

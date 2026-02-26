@@ -3,7 +3,7 @@ abstract class SyncService {
 
   Future<void> enqueuePendingOperation(Map<String, dynamic> operation);
 
-  Stream<SyncStatus> watchSyncStatus();
+  Stream<SyncStatus> watchSyncStatus(String uid);
 }
 
 enum SyncStatus {

@@ -4,13 +4,16 @@ import 'package:snapspend_core/snapspend_core.dart';
 class HiveService {
   static const _txnBoxName = 'transactions';
   static const _budgetBoxName = 'budgets';
+  static const _pendingBoxName = 'pending_ops';
 
   Box<Map>? _txnBox;
   Box<Map>? _budgetBox;
+  Box<Map>? _pendingBox;
 
   Future<void> init() async {
     _txnBox = await Hive.openBox<Map>(_txnBoxName);
     _budgetBox = await Hive.openBox<Map>(_budgetBoxName);
+    _pendingBox = await Hive.openBox<Map>(_pendingBoxName);
   }
 
   // ── Transactions ────────────────────────────────────────────────────────
@@ -81,11 +84,34 @@ class HiveService {
         .toList();
   }
 
+  // ── Pending ops queue ─────────────────────────────────────────────────────
+
+  /// Appends an operation to the pending-ops queue.
+  /// Returns the auto-assigned Hive key (used to dequeue after replay).
+  Future<void> enqueuePendingOp(Map<String, dynamic> op) async {
+    await _require(_pendingBox).add(Map.from(op));
+  }
+
+  /// Returns all pending ops as {key → op} — key needed for [dequeuePendingOp].
+  Future<Map<dynamic, Map<String, dynamic>>> getPendingOps() async {
+    final box = _require(_pendingBox);
+    return {
+      for (final key in box.keys)
+        key: Map<String, dynamic>.from(box.get(key)!),
+    };
+  }
+
+  /// Removes a single pending op by its Hive key after successful replay.
+  Future<void> dequeuePendingOp(dynamic key) async {
+    await _require(_pendingBox).delete(key);
+  }
+
   // ── Housekeeping ─────────────────────────────────────────────────────────
 
   Future<void> clearAll() async {
     await _txnBox?.clear();
     await _budgetBox?.clear();
+    await _pendingBox?.clear();
   }
 
   Box<Map> _require(Box<Map>? box) {
