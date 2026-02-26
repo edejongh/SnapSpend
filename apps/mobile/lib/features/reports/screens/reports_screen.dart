@@ -19,6 +19,7 @@ class ReportsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final period = ref.watch(reportPeriodProvider);
     final total = ref.watch(reportTotalProvider);
+    final previousTotal = ref.watch(previousPeriodTotalProvider);
     final spendByCategory = ref.watch(reportSpendByCategoryProvider);
     final spendByMonth = ref.watch(reportSpendByMonthProvider);
     final taxTotal = ref.watch(reportTaxDeductibleProvider);
@@ -49,7 +50,7 @@ class ReportsScreen extends ConsumerWidget {
                   ref.read(reportPeriodProvider.notifier).state = p,
             ),
             const SizedBox(height: 16),
-            _TotalCard(total: total, period: period),
+            _TotalCard(total: total, period: period, previousTotal: previousTotal),
             const SizedBox(height: 16),
             if (spendByMonth.isNotEmpty) ...[
               _SectionCard(
@@ -138,11 +139,23 @@ class ReportsScreen extends ConsumerWidget {
 class _TotalCard extends StatelessWidget {
   final double total;
   final String period;
+  final double previousTotal;
 
-  const _TotalCard({required this.total, required this.period});
+  const _TotalCard({
+    required this.total,
+    required this.period,
+    required this.previousTotal,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final hasDelta = previousTotal > 0;
+    final delta = total - previousTotal;
+    final deltaPct =
+        hasDelta ? (delta / previousTotal * 100).abs() : 0.0;
+    final isUp = delta > 0;
+    final isDown = delta < 0;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -164,11 +177,42 @@ class _TotalCard extends StatelessWidget {
                   .headlineMedium
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 2),
-            Text(
-              'Total spend',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            const SizedBox(height: 4),
+            if (hasDelta)
+              Row(
+                children: [
+                  Icon(
+                    isUp
+                        ? Icons.arrow_upward
+                        : isDown
+                            ? Icons.arrow_downward
+                            : Icons.remove,
+                    size: 14,
+                    color: isUp
+                        ? Colors.red.shade600
+                        : isDown
+                            ? Colors.green.shade600
+                            : Colors.grey,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${deltaPct.toStringAsFixed(0)}% vs previous period',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: isUp
+                              ? Colors.red.shade600
+                              : isDown
+                                  ? Colors.green.shade600
+                                  : Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                ],
+              )
+            else
+              Text(
+                'Total spend',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
           ],
         ),
       ),

@@ -4,6 +4,7 @@ import 'transaction_provider.dart';
 
 const reportPeriods = [
   'This Month',
+  'Last Month',
   'Last 3 Months',
   'Last 6 Months',
   'This Year',
@@ -16,6 +17,10 @@ final reportPeriodProvider =
   final now = DateTime.now();
   final end = DateTime(now.year, now.month, now.day, 23, 59, 59);
   switch (period) {
+    case 'Last Month':
+      final lastMonth = DateTime(now.year, now.month - 1);
+      final lastMonthEnd = DateTime(now.year, now.month, 0, 23, 59, 59);
+      return (DateTime(lastMonth.year, lastMonth.month, 1), lastMonthEnd);
     case 'Last 3 Months':
       return (DateTime(now.year, now.month - 2, 1), end);
     case 'Last 6 Months':
@@ -26,6 +31,40 @@ final reportPeriodProvider =
       return (DateTime(now.year, now.month, 1), end);
   }
 }
+
+/// Date range of the period immediately preceding the selected one.
+(DateTime, DateTime) _previousPeriodDateRange(String period) {
+  final now = DateTime.now();
+  switch (period) {
+    case 'Last Month':
+      final twoBack = DateTime(now.year, now.month - 2);
+      final twoBackEnd = DateTime(now.year, now.month - 1, 0, 23, 59, 59);
+      return (DateTime(twoBack.year, twoBack.month, 1), twoBackEnd);
+    case 'Last 3 Months':
+      return (DateTime(now.year, now.month - 5, 1),
+          DateTime(now.year, now.month - 3, 0, 23, 59, 59));
+    case 'Last 6 Months':
+      return (DateTime(now.year, now.month - 11, 1),
+          DateTime(now.year, now.month - 6, 0, 23, 59, 59));
+    case 'This Year':
+      return (DateTime(now.year - 1, 1, 1),
+          DateTime(now.year - 1, 12, 31, 23, 59, 59));
+    default: // This Month → compare to last month
+      final lastMonth = DateTime(now.year, now.month - 1);
+      final lastMonthEnd = DateTime(now.year, now.month, 0, 23, 59, 59);
+      return (DateTime(lastMonth.year, lastMonth.month, 1), lastMonthEnd);
+  }
+}
+
+/// Total spend in the previous period (for comparison).
+final previousPeriodTotalProvider = Provider<double>((ref) {
+  final period = ref.watch(reportPeriodProvider);
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  final (from, to) = _previousPeriodDateRange(period);
+  return txns
+      .where((t) => !t.date.isBefore(from) && !t.date.isAfter(to))
+      .fold(0.0, (sum, t) => sum + t.amountZAR);
+});
 
 final reportTransactionsProvider = Provider<List<TransactionModel>>((ref) {
   final period = ref.watch(reportPeriodProvider);
