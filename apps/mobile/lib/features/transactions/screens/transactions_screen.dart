@@ -6,8 +6,10 @@ import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 
-// Search query state — scoped to this screen via autoDispose
+// Search and filter state — scoped to this screen via autoDispose
 final _txnSearchProvider = StateProvider.autoDispose<String>((ref) => '');
+final _txnCategoryFilterProvider =
+    StateProvider.autoDispose<String?>((ref) => null);
 
 class TransactionsScreen extends ConsumerWidget {
   const TransactionsScreen({super.key});
@@ -16,6 +18,8 @@ class TransactionsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final txnsAsync = ref.watch(transactionsProvider);
     final query = ref.watch(_txnSearchProvider).toLowerCase();
+    final categoryFilter = ref.watch(_txnCategoryFilterProvider);
+    final categories = ref.watch(categoriesProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('All Transactions')),
@@ -46,34 +50,75 @@ class TransactionsScreen extends ConsumerWidget {
                   ref.read(_txnSearchProvider.notifier).state = v,
             ),
           ),
+          // Category filter chips
+          if (categories.isNotEmpty)
+            SizedBox(
+              height: 40,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: FilterChip(
+                      label: const Text('All'),
+                      selected: categoryFilter == null,
+                      onSelected: (_) => ref
+                          .read(_txnCategoryFilterProvider.notifier)
+                          .state = null,
+                    ),
+                  ),
+                  ...categories.map((cat) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: FilterChip(
+                          avatar: Text(cat.icon,
+                              style: const TextStyle(fontSize: 14)),
+                          label: Text(cat.name),
+                          selected: categoryFilter == cat.categoryId,
+                          onSelected: (_) => ref
+                              .read(_txnCategoryFilterProvider.notifier)
+                              .state = categoryFilter == cat.categoryId
+                                  ? null
+                                  : cat.categoryId,
+                        ),
+                      )),
+                ],
+              ),
+            ),
           Expanded(
             child: txnsAsync.when(
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (allTxns) {
-                final txns = query.isEmpty
+                var txns = categoryFilter == null
                     ? allTxns
-                    : allTxns.where((t) {
-                        return t.vendor.toLowerCase().contains(query) ||
-                            t.category.toLowerCase().contains(query) ||
-                            (t.note?.toLowerCase().contains(query) ?? false);
-                      }).toList();
+                    : allTxns
+                        .where((t) => t.category == categoryFilter)
+                        .toList();
+                if (query.isNotEmpty) {
+                  txns = txns.where((t) {
+                    return t.vendor.toLowerCase().contains(query) ||
+                        t.category.toLowerCase().contains(query) ||
+                        (t.note?.toLowerCase().contains(query) ?? false);
+                  }).toList();
+                }
 
                 if (txns.isEmpty) {
-                  return query.isNotEmpty
-                      ? Center(
-                          child: Text(
-                            'No results for "$query"',
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-                        )
-                      : const EmptyStateWidget(
-                          icon: Icons.receipt_long_outlined,
-                          title: 'No transactions yet',
-                          subtitle:
-                              'Tap the camera button to scan your first receipt',
-                        );
+                  if (query.isNotEmpty || categoryFilter != null) {
+                    return const Center(
+                      child: Text(
+                        'No matching transactions',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    );
+                  }
+                  return const EmptyStateWidget(
+                    icon: Icons.receipt_long_outlined,
+                    title: 'No transactions yet',
+                    subtitle:
+                        'Tap the camera button to scan your first receipt',
+                  );
                 }
 
                 // Group by date

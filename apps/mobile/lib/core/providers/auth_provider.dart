@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:snapspend_core/snapspend_core.dart';
@@ -59,6 +60,7 @@ class AuthNotifier extends AsyncNotifier<void> {
           email: email,
           password: password,
         );
+        await _registerFcmToken();
       } on FirebaseAuthException catch (e) {
         throw _friendlyAuthError(e);
       }
@@ -87,10 +89,24 @@ class AuthNotifier extends AsyncNotifier<void> {
         );
         final firebaseService = ref.read(firebaseServiceProvider);
         await firebaseService.saveUser(userModel);
+        await _registerFcmToken();
       } on FirebaseAuthException catch (e) {
         throw _friendlyAuthError(e);
       }
     });
+  }
+
+  /// Saves the current FCM token to Firestore so the server can send push
+  /// notifications to this device. Non-fatal — never blocks auth flow.
+  Future<void> _registerFcmToken() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await ref.read(firebaseServiceProvider).saveFcmToken(uid, token);
+      }
+    } catch (_) {}
   }
 
   Future<void> logout() async {
@@ -135,6 +151,7 @@ class AuthNotifier extends AsyncNotifier<void> {
         );
         await ref.read(firebaseServiceProvider).saveUser(userModel);
       }
+      await _registerFcmToken();
     });
   }
 }

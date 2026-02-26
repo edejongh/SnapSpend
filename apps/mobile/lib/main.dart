@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/providers/hive_provider.dart';
 import 'core/services/firebase_service_impl.dart';
@@ -38,10 +39,20 @@ void main() async {
   final hiveService = HiveService();
   await hiveService.init();
 
+  final firebaseServiceImpl = FirebaseServiceImpl();
+
+  // Keep FCM token fresh when it rotates
+  FirebaseMessaging.instance.onTokenRefresh.listen((token) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      firebaseServiceImpl.saveFcmToken(uid, token);
+    }
+  });
+
   runApp(
     ProviderScope(
       overrides: [
-        firebaseServiceProvider.overrideWithValue(FirebaseServiceImpl()),
+        firebaseServiceProvider.overrideWithValue(firebaseServiceImpl),
         hiveServiceProvider.overrideWithValue(hiveService),
       ],
       child: const SnapSpendApp(),

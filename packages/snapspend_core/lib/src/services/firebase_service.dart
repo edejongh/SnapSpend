@@ -30,6 +30,8 @@ abstract class FirebaseService {
 
   Future<void> deleteUserData(String uid);
 
+  Future<void> saveFcmToken(String uid, String token);
+
   Future<List<CategoryModel>> getUserCategories(String uid);
 
   Future<void> saveUserCategory(String uid, CategoryModel category);

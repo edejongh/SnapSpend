@@ -129,6 +129,14 @@ class FirebaseServiceImpl implements FirebaseService {
   }
 
   @override
+  Future<void> saveFcmToken(String uid, String token) async {
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .set({'fcmToken': token}, SetOptions(merge: true));
+  }
+
+  @override
   Future<List<CategoryModel>> getUserCategories(String uid) async {
     final snapshot = await _firestore
         .collection('users')
