@@ -1,4 +1,5 @@
 import '../models/budget_model.dart';
+import '../models/category_model.dart';
 import '../models/transaction_model.dart';
 import '../models/user_model.dart';
 
@@ -28,4 +29,10 @@ abstract class FirebaseService {
   Stream<List<BudgetModel>> watchBudgets(String uid);
 
   Future<void> deleteUserData(String uid);
+
+  Future<List<CategoryModel>> getUserCategories(String uid);
+
+  Future<void> saveUserCategory(String uid, CategoryModel category);
+
+  Future<void> deleteUserCategory(String uid, String categoryId);
 }

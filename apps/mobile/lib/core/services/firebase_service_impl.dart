@@ -129,6 +129,38 @@ class FirebaseServiceImpl implements FirebaseService {
   }
 
   @override
+  Future<List<CategoryModel>> getUserCategories(String uid) async {
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('categories')
+        .get();
+    return snapshot.docs
+        .map((doc) => CategoryModel.fromMap(doc.data()))
+        .toList();
+  }
+
+  @override
+  Future<void> saveUserCategory(String uid, CategoryModel category) async {
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('categories')
+        .doc(category.categoryId)
+        .set(category.toMap());
+  }
+
+  @override
+  Future<void> deleteUserCategory(String uid, String categoryId) async {
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('categories')
+        .doc(categoryId)
+        .delete();
+  }
+
+  @override
   Future<void> deleteUserData(String uid) async {
     final userRef = _firestore.collection('users').doc(uid);
 

@@ -5,15 +5,18 @@ class HiveService {
   static const _txnBoxName = 'transactions';
   static const _budgetBoxName = 'budgets';
   static const _pendingBoxName = 'pending_ops';
+  static const _userCategoryBoxName = 'user_categories';
 
   Box<Map>? _txnBox;
   Box<Map>? _budgetBox;
   Box<Map>? _pendingBox;
+  Box<Map>? _userCategoryBox;
 
   Future<void> init() async {
     _txnBox = await Hive.openBox<Map>(_txnBoxName);
     _budgetBox = await Hive.openBox<Map>(_budgetBoxName);
     _pendingBox = await Hive.openBox<Map>(_pendingBoxName);
+    _userCategoryBox = await Hive.openBox<Map>(_userCategoryBoxName);
   }
 
   // ── Transactions ────────────────────────────────────────────────────────
@@ -84,6 +87,23 @@ class HiveService {
         .toList();
   }
 
+  // ── User categories ───────────────────────────────────────────────────────
+
+  Future<List<CategoryModel>> getUserCategories() async {
+    return _require(_userCategoryBox)
+        .values
+        .map((e) => CategoryModel.fromMap(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<void> saveUserCategory(CategoryModel category) async {
+    await _require(_userCategoryBox).put(category.categoryId, category.toMap());
+  }
+
+  Future<void> deleteUserCategory(String categoryId) async {
+    await _require(_userCategoryBox).delete(categoryId);
+  }
+
   // ── Pending ops queue ─────────────────────────────────────────────────────
 
   /// Appends an operation to the pending-ops queue.
@@ -111,6 +131,7 @@ class HiveService {
   Future<void> clearAll() async {
     await _txnBox?.clear();
     await _budgetBox?.clear();
+    await _userCategoryBox?.clear();
     await _pendingBox?.clear();
   }
 

@@ -32,6 +32,12 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/budget'),
           ),
+          ListTile(
+            leading: const Icon(Icons.label_outline),
+            title: const Text('Categories'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/categories'),
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.currency_exchange),
