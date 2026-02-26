@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -37,6 +40,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
   /// ZAR exchange rate for the selected currency (1 <currency> = _rateToZAR ZAR).
   double _rateToZAR = 1.0;
   bool _fetchingRate = false;
+  bool _isSaving = false;
 
   bool get _isEditing => widget.existingTransaction != null;
 
@@ -112,13 +116,31 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    setState(() => _isSaving = true);
+
     final amount = double.tryParse(_amountCtrl.text) ?? 0;
     final existing = widget.existingTransaction;
     final ocr = widget.ocrResult;
     final noteText = _noteCtrl.text.trim();
+    final uid = ref.read(authStateProvider).asData?.value?.uid;
+    final txnId = existing?.txnId ?? const Uuid().v4();
+
+    // Upload receipt image for new OCR transactions (non-fatal if it fails)
+    String? receiptStoragePath = existing?.receiptStoragePath;
+    if (!_isEditing && ocr?.imagePath != null && uid != null) {
+      try {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('receipts/$uid/$txnId.jpg');
+        await storageRef.putFile(File(ocr!.imagePath!));
+        receiptStoragePath = await storageRef.getDownloadURL();
+      } catch (_) {
+        // Non-fatal — transaction is saved without an image
+      }
+    }
 
     final txn = TransactionModel(
-      txnId: existing?.txnId ?? const Uuid().v4(),
+      txnId: txnId,
       amount: amount,
       currency: _selectedCurrency,
       amountZAR: amount * _rateToZAR,
@@ -126,6 +148,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
       vendor: _vendorCtrl.text.trim(),
       date: _selectedDate,
       note: noteText.isEmpty ? null : noteText,
+      receiptStoragePath: receiptStoragePath,
       isTaxDeductible: _isTaxDeductible,
       ocrRawText: existing?.ocrRawText ?? ocr?.rawText,
       ocrConfidence: existing?.ocrConfidence ?? ocr?.confidence,
@@ -147,6 +170,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
           .addTransaction(txn);
       if (mounted) context.go('/home');
     }
+    if (mounted) setState(() => _isSaving = false);
   }
 
   @override
@@ -281,7 +305,8 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
             const SizedBox(height: 24),
             PrimaryButton(
               label: _isEditing ? 'Save Changes' : 'Save Transaction',
-              onPressed: _save,
+              onPressed: _isSaving ? null : _save,
+              isLoading: _isSaving,
             ),
           ],
         ),

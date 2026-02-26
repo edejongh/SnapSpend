@@ -353,6 +353,24 @@ class _TransactionDetailSheet extends ConsumerWidget {
               minimumSize: const Size.fromHeight(40),
             ),
           ),
+          if (t.receiptStoragePath != null) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                t.receiptStoragePath!,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return const SizedBox(
+                    height: 160,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                },
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          ],
           const Divider(height: 32),
           _DetailRow(label: 'Date', value: DateFormatter.formatDate(t.date)),
           if (t.currency != 'ZAR')

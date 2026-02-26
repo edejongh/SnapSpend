@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/services/ocr_service_impl.dart';
 import '../widgets/camera_preview_widget.dart';
 import '../widgets/ocr_overlay_widget.dart';
@@ -120,7 +121,17 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
     try {
       final result = await _ocrService.processImage(imagePath);
       if (!mounted) return;
-      context.push('/snap/review', extra: result);
+      // Attach the local image path so the review screen can upload it
+      final resultWithPath = OcrResult(
+        rawText: result.rawText,
+        confidence: result.confidence,
+        extractedAmount: result.extractedAmount,
+        extractedDate: result.extractedDate,
+        extractedVendor: result.extractedVendor,
+        suggestedCategory: result.suggestedCategory,
+        imagePath: imagePath,
+      );
+      context.push('/snap/review', extra: resultWithPath);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
