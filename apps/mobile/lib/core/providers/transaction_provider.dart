@@ -81,6 +81,12 @@ final avgDailySpendProvider = Provider<double>((ref) {
   return spend / day;
 });
 
+// Transactions flagged for review (low OCR confidence)
+final flaggedTransactionsProvider = Provider<List<TransactionModel>>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  return txns.where((t) => t.flaggedForReview).toList();
+});
+
 // Spend by category this month
 final spendByCategoryProvider = Provider<Map<String, double>>((ref) {
   final txns = ref.watch(transactionsProvider).asData?.value ?? [];

@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/hive_provider.dart';
+import '../../../core/providers/theme_provider.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -15,6 +16,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserProvider);
     final userModel = userAsync.asData?.value;
+    final themeMode = ref.watch(themeModeProvider);
 
     return AppScaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -37,6 +39,28 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Categories'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/categories'),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.brightness_6_outlined),
+            title: const Text('Appearance'),
+            trailing: DropdownButton<ThemeMode>(
+              value: themeMode,
+              underline: const SizedBox.shrink(),
+              items: const [
+                DropdownMenuItem(
+                    value: ThemeMode.system, child: Text('System')),
+                DropdownMenuItem(
+                    value: ThemeMode.light, child: Text('Light')),
+                DropdownMenuItem(
+                    value: ThemeMode.dark, child: Text('Dark')),
+              ],
+              onChanged: (mode) {
+                if (mode != null) {
+                  ref.read(themeModeProvider.notifier).setMode(mode);
+                }
+              },
+            ),
           ),
           const Divider(),
           ListTile(

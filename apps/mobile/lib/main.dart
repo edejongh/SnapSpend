@@ -9,6 +9,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/providers/hive_provider.dart';
+import 'core/providers/theme_provider.dart';
 import 'core/services/firebase_service_impl.dart';
 import 'core/services/hive_service.dart';
 import 'firebase_options.dart';
@@ -49,12 +50,17 @@ void main() async {
     }
   });
 
+  final container = ProviderContainer(
+    overrides: [
+      firebaseServiceProvider.overrideWithValue(firebaseServiceImpl),
+      hiveServiceProvider.overrideWithValue(hiveService),
+    ],
+  );
+  await container.read(themeModeProvider.notifier).load();
+
   runApp(
-    ProviderScope(
-      overrides: [
-        firebaseServiceProvider.overrideWithValue(firebaseServiceImpl),
-        hiveServiceProvider.overrideWithValue(hiveService),
-      ],
+    UncontrolledProviderScope(
+      container: container,
       child: const SnapSpendApp(),
     ),
   );
@@ -66,10 +72,12 @@ class SnapSpendApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
       title: 'SnapSpend',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      themeMode: themeMode,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

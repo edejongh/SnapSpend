@@ -47,6 +47,7 @@ class HomeScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
               BudgetAlertBanner(),
+              _FlaggedReceiptsBanner(),
               MonthlySummaryCard(),
               SizedBox(height: 12),
               _QuickStatsRow(),
@@ -154,6 +155,46 @@ class _AlertsSheet extends StatelessWidget {
               const SizedBox(height: 8),
             ],
         ],
+      ),
+    );
+  }
+}
+
+// ── Flagged receipts banner ──────────────────────────────────────────────────
+
+class _FlaggedReceiptsBanner extends ConsumerWidget {
+  const _FlaggedReceiptsBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final flagged = ref.watch(flaggedTransactionsProvider);
+    if (flagged.isEmpty) return const SizedBox.shrink();
+
+    return GestureDetector(
+      onTap: () => context.push('/transactions'),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade50,
+          border: Border.all(color: Colors.blue.shade200),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.rate_review_outlined,
+                color: Colors.blue.shade700, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${flagged.length} receipt${flagged.length == 1 ? '' : 's'} '
+                'need${flagged.length == 1 ? 's' : ''} review — tap to check',
+                style: TextStyle(color: Colors.blue.shade800, fontSize: 13),
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.blue.shade700, size: 18),
+          ],
+        ),
       ),
     );
   }
