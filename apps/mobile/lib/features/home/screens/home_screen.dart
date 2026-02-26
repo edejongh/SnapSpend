@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/auth_provider.dart';
-import '../../../core/providers/transaction_provider.dart';
 import '../../../core/providers/budget_provider.dart';
+import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../widgets/budget_alert_banner.dart';
-import '../widgets/monthly_summary_card.dart';
 import '../widgets/budget_ring_chart.dart';
+import '../widgets/monthly_summary_card.dart';
 import '../widgets/recent_transactions_list.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -48,6 +48,8 @@ class HomeScreen extends ConsumerWidget {
             children: const [
               BudgetAlertBanner(),
               MonthlySummaryCard(),
+              SizedBox(height: 12),
+              _QuickStatsRow(),
               SizedBox(height: 20),
               BudgetRingChart(),
               SizedBox(height: 20),
@@ -151,6 +153,83 @@ class _AlertsSheet extends StatelessWidget {
               _AlertRow(budget: budget, utilisation: pct),
               const SizedBox(height: 8),
             ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Quick stats row ──────────────────────────────────────────────────────────
+
+class _QuickStatsRow extends ConsumerWidget {
+  const _QuickStatsRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final txnCount = ref.watch(monthlyTransactionCountProvider);
+    final avgDaily = ref.watch(avgDailySpendProvider);
+
+    return Row(
+      children: [
+        Expanded(
+          child: _StatChip(
+            icon: Icons.receipt_outlined,
+            label: 'This month',
+            value: '$txnCount transaction${txnCount == 1 ? '' : 's'}',
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatChip(
+            icon: Icons.today_outlined,
+            label: 'Daily avg',
+            value: CurrencyFormatter.format(avgDaily, 'ZAR'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _StatChip(
+      {required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Colors.grey.shade600,
+                      ),
+                ),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

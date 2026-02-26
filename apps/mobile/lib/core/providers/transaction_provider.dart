@@ -64,6 +64,23 @@ final lastMonthSpendProvider = Provider<double>((ref) {
       .fold(0.0, (sum, t) => sum + t.amountZAR);
 });
 
+// Transaction count this month
+final monthlyTransactionCountProvider = Provider<int>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  final now = DateTime.now();
+  return txns
+      .where((t) => t.date.year == now.year && t.date.month == now.month)
+      .length;
+});
+
+// Average daily spend this month (spend / days elapsed so far)
+final avgDailySpendProvider = Provider<double>((ref) {
+  final spend = ref.watch(monthlySpendProvider);
+  final day = DateTime.now().day;
+  if (day == 0) return 0.0;
+  return spend / day;
+});
+
 // Spend by category this month
 final spendByCategoryProvider = Provider<Map<String, double>>((ref) {
   final txns = ref.watch(transactionsProvider).asData?.value ?? [];

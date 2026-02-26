@@ -1,8 +1,9 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/budget_provider.dart';
-import '../../../shared/theme/app_colors.dart';
+import '../../../core/providers/category_provider.dart';
 
 class BudgetRingChart extends ConsumerWidget {
   const BudgetRingChart({super.key});
@@ -13,11 +14,21 @@ class BudgetRingChart extends ConsumerWidget {
     final budgets = ref.watch(budgetsProvider).asData?.value ?? [];
 
     if (budgets.isEmpty) {
-      return const Card(
+      return Card(
         child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Center(
-            child: Text('No budgets set up yet. Add one in Settings.'),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const Text(
+                'No budgets set up yet.',
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => context.push('/settings/budget'),
+                child: const Text('Set up a budget'),
+              ),
+            ],
           ),
         ),
       );
@@ -29,58 +40,108 @@ class BudgetRingChart extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Budget Overview',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 160,
-              child: PieChart(
-                PieChartData(
-                  sections: _buildSections(utilisation),
-                  centerSpaceRadius: 50,
-                  sectionsSpace: 2,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Budgets',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
-              ),
+                TextButton(
+                  onPressed: () => context.push('/settings/budget'),
+                  child: const Text('Manage'),
+                ),
+              ],
             ),
+            const SizedBox(height: 8),
+            ...budgets.map((budget) {
+              final key = budget.categoryId ?? 'overall';
+              final pct = (utilisation[key] ?? 0.0).clamp(0.0, double.infinity);
+              final spent = budget.limitAmount * pct;
+              return _BudgetProgressRow(
+                budget: budget,
+                utilisation: pct,
+                spent: spent,
+              );
+            }),
           ],
         ),
       ),
     );
   }
+}
 
-  List<PieChartSectionData> _buildSections(Map<String, double> utilisation) {
-    if (utilisation.isEmpty) {
-      return [
-        PieChartSectionData(
-          value: 1,
-          color: Colors.grey.shade200,
-          radius: 20,
-          showTitle: false,
-        ),
-      ];
-    }
-    final colors = [
-      AppColors.primary,
-      AppColors.accent,
-      AppColors.success,
-      AppColors.warning,
-      AppColors.error,
-    ];
-    return utilisation.entries.indexed.map((entry) {
-      final (i, e) = entry;
-      final pct = (e.value * 100).clamp(0.0, 100.0);
-      return PieChartSectionData(
-        value: pct,
-        color: colors[i % colors.length],
-        radius: 20,
-        title: '${pct.toStringAsFixed(0)}%',
-        titleStyle:
-            const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-      );
-    }).toList();
+class _BudgetProgressRow extends ConsumerWidget {
+  final BudgetModel budget;
+  final double utilisation;
+  final double spent;
+
+  const _BudgetProgressRow({
+    required this.budget,
+    required this.utilisation,
+    required this.spent,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final category = budget.categoryId != null
+        ? ref.watch(categoryByIdProvider(budget.categoryId!))
+        : null;
+    final isOver = utilisation >= 1.0;
+    final isWarning = utilisation >= budget.alertAt && !isOver;
+
+    final barColor = isOver
+        ? Theme.of(context).colorScheme.error
+        : isWarning
+            ? Colors.amber.shade600
+            : Theme.of(context).colorScheme.primary;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (category != null)
+                Text(category.icon,
+                    style: const TextStyle(fontSize: 14)),
+              if (category != null) const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  budget.name,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w500),
+                ),
+              ),
+              Text(
+                '${CurrencyFormatter.format(spent, 'ZAR')} / ${CurrencyFormatter.format(budget.limitAmount, 'ZAR')}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: isOver
+                          ? Theme.of(context).colorScheme.error
+                          : Colors.grey.shade600,
+                      fontWeight:
+                          isOver ? FontWeight.bold : FontWeight.normal,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: utilisation.clamp(0.0, 1.0),
+              minHeight: 8,
+              backgroundColor: Colors.grey.shade200,
+              valueColor: AlwaysStoppedAnimation(barColor),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
