@@ -209,23 +209,34 @@ class _QuickStatsRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final txnCount = ref.watch(monthlyTransactionCountProvider);
     final avgDaily = ref.watch(avgDailySpendProvider);
+    final todaySpend = ref.watch(todaySpendProvider);
 
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _StatChip(
-            icon: Icons.receipt_outlined,
-            label: 'This month',
-            value: '$txnCount transaction${txnCount == 1 ? '' : 's'}',
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _StatChip(
+                icon: Icons.today_outlined,
+                label: 'Today',
+                value: CurrencyFormatter.format(todaySpend, 'ZAR'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatChip(
+                icon: Icons.calendar_month_outlined,
+                label: 'Daily avg',
+                value: CurrencyFormatter.format(avgDaily, 'ZAR'),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _StatChip(
-            icon: Icons.today_outlined,
-            label: 'Daily avg',
-            value: CurrencyFormatter.format(avgDaily, 'ZAR'),
-          ),
+        const SizedBox(height: 8),
+        _StatChip(
+          icon: Icons.receipt_outlined,
+          label: 'This month',
+          value: '$txnCount transaction${txnCount == 1 ? '' : 's'} recorded',
         ),
       ],
     );

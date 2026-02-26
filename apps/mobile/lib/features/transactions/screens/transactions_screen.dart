@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
@@ -180,6 +181,12 @@ class TransactionsScreen extends ConsumerWidget {
                   );
                 }
 
+                // Summary bar when filtered or searching
+                final filteredTotal = txns.fold(
+                    0.0, (sum, t) => sum + t.amountZAR);
+                final isFiltered =
+                    query.isNotEmpty || categoryFilter != null;
+
                 // Group by date
                 final groups = <String, List<TransactionModel>>{};
                 for (final txn in txns) {
@@ -194,25 +201,52 @@ class TransactionsScreen extends ConsumerWidget {
                   }
                 }
 
-                return RefreshIndicator(
-                  onRefresh: () async =>
-                      ref.invalidate(transactionsProvider),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: items.length,
-                    itemBuilder: (context, i) {
-                      final item = items[i];
-                      if (item is _HeaderItem) {
-                        return _DateHeader(label: item.label);
-                      }
-                      final txn = (item as _TxnItem).transaction;
-                      return _DismissibleTile(
-                        transaction: txn,
-                        onDelete: () => _confirmDelete(context, ref, txn),
-                        onTap: () => _showDetail(context, ref, txn),
-                      );
-                    },
-                  ),
+                return Column(
+                  children: [
+                    if (isFiltered)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        child: Text(
+                          '${txns.length} result${txns.length == 1 ? '' : 's'} · '
+                          '${CurrencyFormatter.format(filteredTotal, 'ZAR')} total',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                color: Colors.grey.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                      ),
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: () async =>
+                            ref.invalidate(transactionsProvider),
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          itemCount: items.length,
+                          itemBuilder: (context, i) {
+                            final item = items[i];
+                            if (item is _HeaderItem) {
+                              return _DateHeader(label: item.label);
+                            }
+                            final txn = (item as _TxnItem).transaction;
+                            return _DismissibleTile(
+                              transaction: txn,
+                              onDelete: () =>
+                                  _confirmDelete(context, ref, txn),
+                              onTap: () => _showDetail(context, ref, txn),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
@@ -387,6 +421,17 @@ class _TransactionDetailSheet extends ConsumerWidget {
   final TransactionModel transaction;
   const _TransactionDetailSheet({required this.transaction});
 
+  void _shareTransaction(TransactionModel t, String? categoryName) {
+    final lines = [
+      '${t.vendor} — ${CurrencyFormatter.format(t.amountZAR, 'ZAR')}',
+      'Date: ${DateFormatter.formatDate(t.date)}',
+      'Category: ${categoryName ?? t.category}',
+      if (t.note != null && t.note!.isNotEmpty) 'Note: ${t.note}',
+      if (t.isTaxDeductible) 'Tax deductible',
+    ];
+    Share.share(lines.join('\n'), subject: 'SnapSpend — ${t.vendor}');
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final category = ref.watch(categoryByIdProvider(transaction.category));
@@ -446,16 +491,31 @@ class _TransactionDetailSheet extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              context.push('/edit-transaction', extra: t);
-            },
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('Edit'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(40),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.push('/edit-transaction', extra: t);
+                  },
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Edit'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: () => _shareTransaction(t, category?.name),
+                icon: const Icon(Icons.share_outlined, size: 18),
+                label: const Text('Share'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                ),
+              ),
+            ],
           ),
           if (t.receiptStoragePath != null) ...[
             const SizedBox(height: 12),

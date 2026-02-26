@@ -65,6 +65,18 @@ final lastMonthSpendProvider = Provider<double>((ref) {
       .fold(0.0, (sum, t) => sum + t.amountZAR);
 });
 
+// Today's total spend
+final todaySpendProvider = Provider<double>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  final today = DateTime.now();
+  return txns
+      .where((t) =>
+          t.date.year == today.year &&
+          t.date.month == today.month &&
+          t.date.day == today.day)
+      .fold(0.0, (sum, t) => sum + t.amountZAR);
+});
+
 // Transaction count this month
 final monthlyTransactionCountProvider = Provider<int>((ref) {
   final txns = ref.watch(transactionsProvider).asData?.value ?? [];
