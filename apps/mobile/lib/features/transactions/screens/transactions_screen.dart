@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
+import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 
 // Search and filter state — scoped to this screen via autoDispose
@@ -21,8 +22,8 @@ class TransactionsScreen extends ConsumerWidget {
     final categoryFilter = ref.watch(_txnCategoryFilterProvider);
     final categories = ref.watch(categoriesProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('All Transactions')),
+    return AppScaffold(
+      appBar: AppBar(title: const Text('Transactions')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/snap/review'),
         tooltip: 'Add transaction',

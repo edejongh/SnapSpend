@@ -58,6 +58,11 @@ class AppScaffold extends ConsumerWidget {
             label: 'Home',
           ),
           NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long),
+            label: 'Transactions',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.camera_alt_outlined),
             selectedIcon: Icon(Icons.camera_alt),
             label: 'Snap',
@@ -78,10 +83,12 @@ class AppScaffold extends ConsumerWidget {
             case 0:
               context.go('/home');
             case 1:
-              context.push('/snap');
+              context.go('/transactions');
             case 2:
-              context.go('/reports');
+              context.push('/snap');
             case 3:
+              context.go('/reports');
+            case 4:
               context.go('/settings');
           }
         },
@@ -90,9 +97,10 @@ class AppScaffold extends ConsumerWidget {
   }
 
   int _indexForLocation(String location) {
-    if (location.startsWith('/snap')) return 1;
-    if (location.startsWith('/reports')) return 2;
-    if (location.startsWith('/settings')) return 3;
+    if (location.startsWith('/transactions')) return 1;
+    if (location.startsWith('/snap')) return 2;
+    if (location.startsWith('/reports')) return 3;
+    if (location.startsWith('/settings')) return 4;
     return 0;
   }
 }

@@ -53,6 +53,17 @@ final monthlySpendProvider = Provider<double>((ref) {
       .fold(0.0, (sum, t) => sum + t.amountZAR);
 });
 
+// Total spend last month
+final lastMonthSpendProvider = Provider<double>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  final now = DateTime.now();
+  final lastMonth = DateTime(now.year, now.month - 1);
+  return txns
+      .where((t) =>
+          t.date.year == lastMonth.year && t.date.month == lastMonth.month)
+      .fold(0.0, (sum, t) => sum + t.amountZAR);
+});
+
 // Spend by category this month
 final spendByCategoryProvider = Provider<Map<String, double>>((ref) {
   final txns = ref.watch(transactionsProvider).asData?.value ?? [];
