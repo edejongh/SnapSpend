@@ -4,6 +4,7 @@ import 'package:snapspend_core/snapspend_core.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/providers/budget_provider.dart';
 import '../../../core/providers/category_provider.dart';
+import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/primary_button.dart';
 
 class BudgetSetupScreen extends ConsumerWidget {
@@ -185,6 +186,14 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
   Widget build(BuildContext context) {
     final categories = ref.watch(categoriesProvider);
     final notifierState = ref.watch(budgetNotifierProvider);
+    final avgCategorySpend = ref.watch(avgMonthlyCategorySpendProvider);
+
+    // Suggestion = avg monthly spend for selected category (or overall)
+    final suggested = _selectedCategoryId != null
+        ? avgCategorySpend[_selectedCategoryId]
+        : (avgCategorySpend.values.isEmpty
+            ? null
+            : avgCategorySpend.values.fold(0.0, (a, b) => a + b));
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -218,6 +227,21 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
                   const TextInputType.numberWithOptions(decimal: true),
               validator: Validators.amount,
             ),
+            if (suggested != null && suggested > 0 && !_isEditing) ...[
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () => setState(() =>
+                    _limitCtrl.text = suggested.toStringAsFixed(0)),
+                child: Text(
+                  'Suggested: R ${suggested.toStringAsFixed(0)} / mo'
+                  ' (3-month avg)  — tap to use',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             DropdownButtonFormField<String?>(
               value: _selectedCategoryId,

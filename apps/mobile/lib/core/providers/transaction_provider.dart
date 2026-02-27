@@ -169,6 +169,26 @@ final largestTransactionThisMonthProvider =
   return thisMonth.reduce((a, b) => a.amountZAR >= b.amountZAR ? a : b);
 });
 
+/// Average monthly spend per category over the last 3 full months.
+/// Key = categoryId, value = average monthly amount.
+final avgMonthlyCategorySpendProvider =
+    Provider<Map<String, double>>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  final now = DateTime.now();
+  // Look at the last 3 complete months
+  final map = <String, double>{};
+  for (int m = 1; m <= 3; m++) {
+    final target = DateTime(now.year, now.month - m);
+    final monthTxns = txns.where((t) =>
+        t.date.year == target.year && t.date.month == target.month);
+    for (final t in monthTxns) {
+      map[t.category] = (map[t.category] ?? 0.0) + t.amountZAR;
+    }
+  }
+  // Divide by 3 to get the monthly average
+  return map.map((k, v) => MapEntry(k, v / 3));
+});
+
 /// A vendor that appears in ≥ 2 distinct calendar months.
 class RecurringVendor {
   final String vendor;
