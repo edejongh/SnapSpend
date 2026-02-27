@@ -100,6 +100,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/transactions',
         builder: (context, state) => TransactionsScreen(
           initialCategory: state.extra as String?,
+          initialSearch: state.uri.queryParameters['search'],
         ),
       ),
       GoRoute(

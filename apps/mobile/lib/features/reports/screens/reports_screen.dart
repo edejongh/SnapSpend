@@ -597,7 +597,14 @@ class _TopVendorsCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             for (final entry in vendors) ...[
-              Row(
+              InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => context.go(
+                  '/transactions?search=${Uri.encodeComponent(entry.key)}',
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
                 children: [
                   Expanded(
                     child: Column(
@@ -613,13 +620,22 @@ class _TopVendorsCard extends StatelessWidget {
                                   Theme.of(context).textTheme.bodyMedium,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            Text(
-                              CurrencyFormatter.format(
-                                  entry.value, 'ZAR'),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            Row(
+                              children: [
+                                Text(
+                                  CurrencyFormatter.format(
+                                      entry.value, 'ZAR'),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                          fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(Icons.chevron_right,
+                                    size: 16,
+                                    color: Colors.grey.shade400),
+                              ],
                             ),
                           ],
                         ),
@@ -634,6 +650,8 @@ class _TopVendorsCard extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+                ),
               ),
               const SizedBox(height: 10),
             ],

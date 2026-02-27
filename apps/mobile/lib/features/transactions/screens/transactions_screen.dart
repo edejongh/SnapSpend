@@ -56,7 +56,8 @@ final _txnTaxFilterProvider =
 
 class TransactionsScreen extends ConsumerWidget {
   final String? initialCategory;
-  const TransactionsScreen({super.key, this.initialCategory});
+  final String? initialSearch;
+  const TransactionsScreen({super.key, this.initialCategory, this.initialSearch});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -73,6 +74,13 @@ class TransactionsScreen extends ConsumerWidget {
     if (initialCategory != null && categoryFilter == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(_txnCategoryFilterProvider.notifier).state = initialCategory;
+      });
+    }
+
+    // Apply deep-link search on first build
+    if (initialSearch != null && query.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(_txnSearchProvider.notifier).state = initialSearch!;
       });
     }
 
