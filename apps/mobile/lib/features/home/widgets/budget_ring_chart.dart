@@ -98,6 +98,21 @@ class _BudgetProgressRow extends ConsumerWidget {
             ? Colors.amber.shade600
             : Theme.of(context).colorScheme.primary;
 
+    // Pacing: compare actual utilisation vs expected at this point in month
+    final now = DateTime.now();
+    final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
+    final expected = now.day / daysInMonth;
+    final _PaceLabel pace;
+    if (utilisation >= 1.0) {
+      pace = _PaceLabel.over;
+    } else if (utilisation < expected * 0.85) {
+      pace = _PaceLabel.ahead;
+    } else if (utilisation > expected * 1.15) {
+      pace = _PaceLabel.behind;
+    } else {
+      pace = _PaceLabel.onPace;
+    }
+
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: budget.categoryId != null
@@ -145,9 +160,45 @@ class _BudgetProgressRow extends ConsumerWidget {
               valueColor: AlwaysStoppedAnimation(barColor),
             ),
           ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                pace.label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: pace.color,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                '${(utilisation * 100).toStringAsFixed(0)}% used · day ${now.day} of $daysInMonth',
+                style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+              ),
+            ],
+          ),
         ],
       ),
     ),
     );
   }
+}
+
+enum _PaceLabel { ahead, onPace, behind, over }
+
+extension _PaceLabelX on _PaceLabel {
+  String get label => switch (this) {
+        _PaceLabel.ahead => '↓ Ahead of pace',
+        _PaceLabel.onPace => '→ On pace',
+        _PaceLabel.behind => '↑ Behind pace',
+        _PaceLabel.over => '✕ Over budget',
+      };
+
+  Color get color => switch (this) {
+        _PaceLabel.ahead => Colors.green.shade600,
+        _PaceLabel.onPace => Colors.grey.shade500,
+        _PaceLabel.behind => Colors.orange.shade700,
+        _PaceLabel.over => Colors.red.shade600,
+      };
 }
