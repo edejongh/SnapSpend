@@ -26,5 +26,17 @@ final syncStatusProvider = StreamProvider<SyncStatus>((ref) {
   final sync = ref.read(syncServiceProvider);
   // Replay any ops that failed while offline at startup
   sync.syncPendingTransactions(uid);
+
+  // Re-run sync whenever connectivity is restored
+  bool _wasOffline = false;
+  final connSub = Connectivity().onConnectivityChanged.listen((results) {
+    final online = results.any((r) => r != ConnectivityResult.none);
+    if (online && _wasOffline) {
+      sync.syncPendingTransactions(uid);
+    }
+    _wasOffline = !online;
+  });
+  ref.onDispose(connSub.cancel);
+
   return sync.watchSyncStatus(uid);
 });
