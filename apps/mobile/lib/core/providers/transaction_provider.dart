@@ -101,6 +101,19 @@ final flaggedTransactionsProvider = Provider<List<TransactionModel>>((ref) {
   return txns.where((t) => t.flaggedForReview).toList();
 });
 
+/// Total spend in the 7 days prior to this week (days 8–14 ago).
+final previousWeekSpendProvider = Provider<double>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  final today = DateTime.now();
+  final from = DateTime(today.year, today.month, today.day)
+      .subtract(const Duration(days: 14));
+  final to = DateTime(today.year, today.month, today.day)
+      .subtract(const Duration(days: 7));
+  return txns
+      .where((t) => !t.date.isBefore(from) && t.date.isBefore(to))
+      .fold(0.0, (sum, t) => sum + t.amountZAR);
+});
+
 // Daily spend for the last 7 days, ordered oldest-first (day, total)
 final weeklyDailySpendProvider =
     Provider<List<(DateTime, double)>>((ref) {

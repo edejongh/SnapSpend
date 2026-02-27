@@ -12,8 +12,14 @@ class WeekAtAGlanceCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(weeklyDailySpendProvider);
     final allTxns = ref.watch(transactionsProvider).asData?.value ?? [];
+    final prevWeekTotal = ref.watch(previousWeekSpendProvider);
     final maxSpend = data.map((e) => e.$2).fold(0.0, max);
     final weekTotal = data.fold(0.0, (sum, e) => sum + e.$2);
+
+    final hasDelta = prevWeekTotal > 0 && weekTotal > 0;
+    final delta = weekTotal - prevWeekTotal;
+    final deltaPct = hasDelta ? (delta / prevWeekTotal * 100).abs().round() : 0;
+    final isUp = delta > 0;
 
     return Card(
       child: Padding(
@@ -32,12 +38,36 @@ class WeekAtAGlanceCard extends ConsumerWidget {
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 if (weekTotal > 0)
-                  Text(
-                    CurrencyFormatter.format(weekTotal, 'ZAR'),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (hasDelta) ...[
+                        Icon(
+                          isUp ? Icons.arrow_upward : Icons.arrow_downward,
+                          size: 11,
+                          color: isUp
+                              ? Colors.red.shade600
+                              : Colors.green.shade600,
                         ),
+                        Text(
+                          '$deltaPct% ',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isUp
+                                ? Colors.red.shade600
+                                : Colors.green.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                      Text(
+                        CurrencyFormatter.format(weekTotal, 'ZAR'),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                    ],
                   ),
               ],
             ),
