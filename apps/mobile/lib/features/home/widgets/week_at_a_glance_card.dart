@@ -15,6 +15,8 @@ class WeekAtAGlanceCard extends ConsumerWidget {
     final prevWeekTotal = ref.watch(previousWeekSpendProvider);
     final maxSpend = data.map((e) => e.$2).fold(0.0, max);
     final weekTotal = data.fold(0.0, (sum, e) => sum + e.$2);
+    final daysWithSpend = data.where((e) => e.$2 > 0).length;
+    final weekAvg = daysWithSpend > 0 ? weekTotal / daysWithSpend : 0.0;
 
     final hasDelta = prevWeekTotal > 0 && weekTotal > 0;
     final delta = weekTotal - prevWeekTotal;
@@ -74,72 +76,95 @@ class WeekAtAGlanceCard extends ConsumerWidget {
             const SizedBox(height: 12),
             SizedBox(
               height: 80,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: data.map((entry) {
-                  final (day, amount) = entry;
-                  final isToday = _isToday(day);
-                  final fraction =
-                      maxSpend > 0 ? (amount / maxSpend) : 0.0;
-                  final barHeight = (fraction * 52).clamp(4.0, 52.0);
-
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: amount > 0
-                          ? () => showDayTransactionsSheet(context, day, allTxns)
-                          : null,
-                      child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          if (isToday && amount > 0) ...[
-                            Text(
-                              CurrencyFormatter.format(amount, 'ZAR'),
-                              style: TextStyle(
-                                fontSize: 9,
-                                color:
-                                    Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                            ),
-                            const SizedBox(height: 2),
-                          ],
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 600),
-                            curve: Curves.easeOut,
-                            height: barHeight,
-                            decoration: BoxDecoration(
-                              color: isToday
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${day.day}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: isToday
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Colors.grey.shade500,
-                              fontWeight: isToday
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ],
+              child: Stack(
+                children: [
+                  // Average reference line
+                  if (weekAvg > 0 && maxSpend > 0)
+                    Positioned(
+                      bottom: 16 + (52 * (weekAvg / maxSpend)).clamp(4.0, 52.0),
+                      left: 0,
+                      right: 0,
+                      child: CustomPaint(
+                        painter: _DashedLinePainter(
+                            color: Colors.grey.shade400),
                       ),
                     ),
-                    ),
-                  );
-                }).toList(),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: data.map((entry) {
+                      final (day, amount) = entry;
+                      final isToday = _isToday(day);
+                      final isMax = amount > 0 && amount == maxSpend;
+                      final showLabel = isToday || isMax;
+                      final fraction =
+                          maxSpend > 0 ? (amount / maxSpend) : 0.0;
+                      final barHeight = (fraction * 52).clamp(4.0, 52.0);
+
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: amount > 0
+                              ? () => showDayTransactionsSheet(context, day, allTxns)
+                              : null,
+                          child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (showLabel && amount > 0) ...[
+                                Text(
+                                  CurrencyFormatter.format(amount, 'ZAR'),
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: isToday
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Colors.grey.shade600,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                ),
+                                const SizedBox(height: 2),
+                              ] else
+                                const SizedBox(height: 13),
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 600),
+                                curve: Curves.easeOut,
+                                height: barHeight,
+                                decoration: BoxDecoration(
+                                  color: isToday
+                                      ? Theme.of(context).colorScheme.primary
+                                      : isMax
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .secondary
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .primaryContainer,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${day.day}',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isToday
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Colors.grey.shade500,
+                                  fontWeight: isToday
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
             ),
           ],
@@ -154,5 +179,26 @@ class WeekAtAGlanceCard extends ConsumerWidget {
         day.month == now.month &&
         day.day == now.day;
   }
+}
 
+class _DashedLinePainter extends CustomPainter {
+  final Color color;
+  const _DashedLinePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    const dashWidth = 4.0;
+    const gapWidth = 4.0;
+    double x = 0;
+    while (x < size.width) {
+      canvas.drawLine(Offset(x, 0), Offset(x + dashWidth, 0), paint);
+      x += dashWidth + gapWidth;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedLinePainter old) => old.color != color;
 }
