@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:snapspend_core/snapspend_core.dart';
-import 'dart:math';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/reports_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
@@ -294,7 +295,10 @@ class _CategoryBreakdown extends ConsumerWidget {
             ...spendByCategory.entries.map((e) {
               final category = ref.watch(categoryByIdProvider(e.key));
               final pct = total > 0 ? (e.value / total * 100) : 0.0;
-              return Padding(
+              return InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => context.go('/transactions', extra: e.key),
+                child: Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
                   children: [
@@ -314,12 +318,20 @@ class _CategoryBreakdown extends ConsumerWidget {
                                 category?.name ?? e.key,
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
-                              Text(
-                                CurrencyFormatter.format(e.value, 'ZAR'),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              Row(
+                                children: [
+                                  Text(
+                                    CurrencyFormatter.format(e.value, 'ZAR'),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(Icons.chevron_right,
+                                      size: 16,
+                                      color: Colors.grey.shade400),
+                                ],
                               ),
                             ],
                           ),
@@ -335,6 +347,7 @@ class _CategoryBreakdown extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
               );
             }),
           ],
