@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/category_provider.dart';
@@ -67,6 +69,11 @@ class TransactionsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Transactions'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.download_outlined),
+            tooltip: 'Export CSV',
+            onPressed: () => _exportCsv(context, ref),
+          ),
           PopupMenuButton<_TxnDateRange>(
             icon: Stack(
               clipBehavior: Clip.none,
@@ -390,6 +397,93 @@ class TransactionsScreen extends ConsumerWidget {
       useSafeArea: true,
       isScrollControlled: true,
       builder: (_) => _TransactionDetailSheet(transaction: txn),
+    );
+  }
+
+  Future<void> _exportCsv(BuildContext context, WidgetRef ref) async {
+    final allTxns = ref.read(transactionsProvider).asData?.value ?? [];
+    final categoryFilter = ref.read(_txnCategoryFilterProvider);
+    final dateRange = ref.read(_txnDateRangeProvider);
+    final query = ref.read(_txnSearchProvider).toLowerCase();
+
+    var txns = categoryFilter == null
+        ? allTxns
+        : allTxns.where((t) => t.category == categoryFilter).toList();
+
+    if (dateRange != _TxnDateRange.all) {
+      final now = DateTime.now();
+      DateTime from;
+      DateTime? to;
+      switch (dateRange) {
+        case _TxnDateRange.thisMonth:
+          from = DateTime(now.year, now.month);
+          to = null;
+        case _TxnDateRange.lastMonth:
+          from = DateTime(now.year, now.month - 1);
+          to = DateTime(now.year, now.month);
+        case _TxnDateRange.last30Days:
+          from = now.subtract(const Duration(days: 30));
+          to = null;
+        case _TxnDateRange.last7Days:
+          from = now.subtract(const Duration(days: 7));
+          to = null;
+        case _TxnDateRange.all:
+          from = DateTime(2000);
+          to = null;
+      }
+      txns = txns
+          .where((t) =>
+              !t.date.isBefore(from) && (to == null || t.date.isBefore(to)))
+          .toList();
+    }
+
+    if (query.isNotEmpty) {
+      txns = txns
+          .where((t) =>
+              t.vendor.toLowerCase().contains(query) ||
+              t.category.toLowerCase().contains(query) ||
+              (t.note?.toLowerCase().contains(query) ?? false))
+          .toList();
+    }
+
+    if (txns.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No transactions to export')),
+      );
+      return;
+    }
+
+    final categories = ref.read(categoriesProvider);
+    final catById = {for (final c in categories) c.categoryId: c};
+
+    final buffer = StringBuffer();
+    buffer.writeln(
+        'Date,Vendor,Category,Amount,Currency,Amount (ZAR),Tax Deductible,Note,Source');
+    for (final t in txns) {
+      final catName = catById[t.category]?.name ?? t.category;
+      final note = (t.note ?? '').replaceAll(',', ';');
+      buffer.writeln(
+        '${t.date.toIso8601String().substring(0, 10)},'
+        '"${t.vendor.replaceAll('"', "'")}",'
+        '$catName,'
+        '${t.amount.toStringAsFixed(2)},'
+        '${t.currency},'
+        '${t.amountZAR.toStringAsFixed(2)},'
+        '${t.isTaxDeductible ? 'Yes' : 'No'},'
+        '$note,'
+        '${t.source}',
+      );
+    }
+
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final dir = await getTemporaryDirectory();
+    final file =
+        File('${dir.path}/snapspend_transactions_$timestamp.csv');
+    await file.writeAsString(buffer.toString());
+
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: 'text/csv')],
+      subject: 'SnapSpend Transactions Export',
     );
   }
 }

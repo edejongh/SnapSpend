@@ -10,6 +10,7 @@ import '../widgets/budget_alert_banner.dart';
 import '../widgets/budget_ring_chart.dart';
 import '../widgets/monthly_summary_card.dart';
 import '../widgets/recent_transactions_list.dart';
+import '../widgets/recurring_card.dart';
 import '../widgets/spending_insights_card.dart';
 import '../widgets/week_at_a_glance_card.dart';
 
@@ -57,6 +58,8 @@ class HomeScreen extends ConsumerWidget {
               WeekAtAGlanceCard(),
               SizedBox(height: 12),
               SpendingInsightsCard(),
+              SizedBox(height: 12),
+              RecurringCard(),
               SizedBox(height: 20),
               BudgetRingChart(),
               SizedBox(height: 20),

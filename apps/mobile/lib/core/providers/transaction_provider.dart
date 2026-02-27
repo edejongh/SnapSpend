@@ -169,6 +169,59 @@ final largestTransactionThisMonthProvider =
   return thisMonth.reduce((a, b) => a.amountZAR >= b.amountZAR ? a : b);
 });
 
+/// A vendor that appears in ≥ 2 distinct calendar months.
+class RecurringVendor {
+  final String vendor;
+  final String category;
+  final double avgMonthlyAmount;
+  final int monthCount;
+
+  const RecurringVendor({
+    required this.vendor,
+    required this.category,
+    required this.avgMonthlyAmount,
+    required this.monthCount,
+  });
+}
+
+/// Vendors that appear in 2+ distinct months — likely subscriptions.
+/// Sorted by average monthly cost descending.
+final recurringTransactionsProvider =
+    Provider<List<RecurringVendor>>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  if (txns.isEmpty) return [];
+
+  // Group: vendor → set of "YYYY-MM" months it appears in
+  final months = <String, Set<String>>{};
+  final totals = <String, double>{};
+  final categories = <String, String>{};
+
+  for (final t in txns) {
+    final key = t.vendor;
+    final monthKey =
+        '${t.date.year}-${t.date.month.toString().padLeft(2, '0')}';
+    months.putIfAbsent(key, () => {}).add(monthKey);
+    totals[key] = (totals[key] ?? 0.0) + t.amountZAR;
+    categories.putIfAbsent(key, () => t.category);
+  }
+
+  final recurring = <RecurringVendor>[];
+  for (final vendor in months.keys) {
+    final mc = months[vendor]!.length;
+    if (mc >= 2) {
+      recurring.add(RecurringVendor(
+        vendor: vendor,
+        category: categories[vendor]!,
+        avgMonthlyAmount: totals[vendor]! / mc,
+        monthCount: mc,
+      ));
+    }
+  }
+
+  recurring.sort((a, b) => b.avgMonthlyAmount.compareTo(a.avgMonthlyAmount));
+  return recurring;
+});
+
 // Transaction CRUD notifier
 class TransactionNotifier extends AsyncNotifier<void> {
   @override
