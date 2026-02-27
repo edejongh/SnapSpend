@@ -157,6 +157,34 @@ class TransactionDetailSheet extends ConsumerWidget {
     }
   }
 
+  Future<void> _confirmDelete(
+      BuildContext context, WidgetRef ref, TransactionModel t) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete transaction?'),
+        content: Text(
+            'Remove "${t.vendor}" — ${CurrencyFormatter.format(t.amountZAR, 'ZAR')}?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(ctx).colorScheme.error),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ref
+          .read(transactionNotifierProvider.notifier)
+          .deleteTransaction(t.txnId);
+      if (context.mounted) Navigator.pop(context);
+    }
+  }
+
   void _shareTransaction(TransactionModel t, String? categoryName) {
     final lines = [
       '${t.vendor} — ${CurrencyFormatter.format(t.amountZAR, 'ZAR')}',
@@ -269,6 +297,24 @@ class TransactionDetailSheet extends ConsumerWidget {
                 label: const Text('Share'),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(0, 40),
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: () => _confirmDelete(context, ref, t),
+                icon: Icon(Icons.delete_outline,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.error),
+                label: Text('Delete',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.error)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  side: BorderSide(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .error
+                          .withValues(alpha: 0.5)),
                 ),
               ),
             ],

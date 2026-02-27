@@ -530,6 +530,30 @@ class TransactionsScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
+                      if (flaggedOnly) ...[
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () async {
+                            for (final t in txns) {
+                              if (t.flaggedForReview) {
+                                await ref
+                                    .read(transactionNotifierProvider.notifier)
+                                    .updateTransaction(
+                                        t.copyWith(flaggedForReview: false));
+                              }
+                            }
+                            ref.read(_txnFlaggedFilterProvider.notifier).state = false;
+                          },
+                          child: Text(
+                            'Mark all reviewed',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
