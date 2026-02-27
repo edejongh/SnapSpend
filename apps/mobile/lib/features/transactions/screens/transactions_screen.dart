@@ -710,12 +710,23 @@ class _DismissibleTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dismissible(
       key: ValueKey(transaction.txnId),
-      direction: DismissDirection.endToStart,
-      confirmDismiss: (_) async {
-        onDelete();
-        return false; // Let the Firestore stream remove it reactively
+      direction: DismissDirection.horizontal,
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.endToStart) {
+          onDelete();
+        } else {
+          // Swipe start-to-end: edit
+          context.push('/edit-transaction', extra: transaction);
+        }
+        return false;
       },
       background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 20),
+        color: Theme.of(context).colorScheme.primary,
+        child: const Icon(Icons.edit_outlined, color: Colors.white),
+      ),
+      secondaryBackground: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         color: Theme.of(context).colorScheme.error,
