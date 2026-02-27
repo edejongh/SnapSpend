@@ -45,6 +45,10 @@ extension _TxnDateRangeLabel on _TxnDateRange {
 final _txnDateRangeProvider =
     StateProvider.autoDispose<_TxnDateRange>((ref) => _TxnDateRange.all);
 
+// (minZAR, maxZAR) — null means no bound
+final _txnAmountRangeProvider =
+    StateProvider.autoDispose<(double?, double?)>((ref) => (null, null));
+
 class TransactionsScreen extends ConsumerWidget {
   final String? initialCategory;
   const TransactionsScreen({super.key, this.initialCategory});
@@ -57,6 +61,7 @@ class TransactionsScreen extends ConsumerWidget {
     final categories = ref.watch(categoriesProvider);
     final sort = ref.watch(_txnSortProvider);
     final dateRange = ref.watch(_txnDateRangeProvider);
+    final amountRange = ref.watch(_txnAmountRangeProvider);
 
     // Apply deep-link category on first build (provider is null on fresh open)
     if (initialCategory != null && categoryFilter == null) {
@@ -69,6 +74,29 @@ class TransactionsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Transactions'),
         actions: [
+          IconButton(
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.filter_list),
+                if (amountRange.$1 != null || amountRange.$2 != null)
+                  Positioned(
+                    top: -2,
+                    right: -2,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            tooltip: 'Amount filter',
+            onPressed: () => _showAmountFilter(context, ref, amountRange),
+          ),
           IconButton(
             icon: const Icon(Icons.download_outlined),
             tooltip: 'Export CSV',
@@ -246,6 +274,16 @@ class TransactionsScreen extends ConsumerWidget {
                 .toList();
           }
 
+          if (amountRange.$1 != null || amountRange.$2 != null) {
+            txns = txns.where((t) {
+              if (amountRange.$1 != null && t.amountZAR < amountRange.$1!)
+                return false;
+              if (amountRange.$2 != null && t.amountZAR > amountRange.$2!)
+                return false;
+              return true;
+            }).toList();
+          }
+
           if (query.isNotEmpty) {
             txns = txns.where((t) {
               return t.vendor.toLowerCase().contains(query) ||
@@ -292,7 +330,9 @@ class TransactionsScreen extends ConsumerWidget {
               txns.fold(0.0, (sum, t) => sum + t.amountZAR);
           final isFiltered = query.isNotEmpty ||
               categoryFilter != null ||
-              dateRange != _TxnDateRange.all;
+              dateRange != _TxnDateRange.all ||
+              amountRange.$1 != null ||
+              amountRange.$2 != null;
 
           // Group by date
           final groups = <String, List<TransactionModel>>{};
@@ -405,6 +445,7 @@ class TransactionsScreen extends ConsumerWidget {
     final categoryFilter = ref.read(_txnCategoryFilterProvider);
     final dateRange = ref.read(_txnDateRangeProvider);
     final query = ref.read(_txnSearchProvider).toLowerCase();
+    final amountRange = ref.read(_txnAmountRangeProvider);
 
     var txns = categoryFilter == null
         ? allTxns
@@ -435,6 +476,16 @@ class TransactionsScreen extends ConsumerWidget {
           .where((t) =>
               !t.date.isBefore(from) && (to == null || t.date.isBefore(to)))
           .toList();
+    }
+
+    if (amountRange.$1 != null || amountRange.$2 != null) {
+      txns = txns.where((t) {
+        if (amountRange.$1 != null && t.amountZAR < amountRange.$1!)
+          return false;
+        if (amountRange.$2 != null && t.amountZAR > amountRange.$2!)
+          return false;
+        return true;
+      }).toList();
     }
 
     if (query.isNotEmpty) {
@@ -485,6 +536,73 @@ class TransactionsScreen extends ConsumerWidget {
       [XFile(file.path, mimeType: 'text/csv')],
       subject: 'SnapSpend Transactions Export',
     );
+  }
+
+  Future<void> _showAmountFilter(
+    BuildContext context,
+    WidgetRef ref,
+    (double?, double?) current,
+  ) async {
+    final minCtrl =
+        TextEditingController(text: current.$1?.toStringAsFixed(0) ?? '');
+    final maxCtrl =
+        TextEditingController(text: current.$2?.toStringAsFixed(0) ?? '');
+
+    final result = await showDialog<(double?, double?)?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Filter by Amount (ZAR)'),
+        content: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: minCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Min',
+                  prefixText: 'R ',
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextField(
+                controller: maxCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Max',
+                  prefixText: 'R ',
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, (null, null)),
+            child: const Text('Clear'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final min = double.tryParse(minCtrl.text);
+              final max = double.tryParse(maxCtrl.text);
+              Navigator.pop(ctx, (min, max));
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      ref.read(_txnAmountRangeProvider.notifier).state = result;
+    }
   }
 }
 
