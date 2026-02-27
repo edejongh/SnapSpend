@@ -122,6 +122,34 @@ class _RecurringRow extends ConsumerWidget {
                   fontWeight: FontWeight.w600, fontSize: 13),
             ),
             const SizedBox(width: 4),
+            GestureDetector(
+              onTap: () => context.push(
+                '/snap/review',
+                extra: OcrResult(
+                  rawText: null,
+                  confidence: 1.0,
+                  extractedAmount: vendor.avgMonthlyAmount,
+                  extractedDate: DateTime.now(),
+                  extractedVendor: vendor.vendor,
+                  suggestedCategory: vendor.category,
+                ),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.add,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
             Icon(Icons.chevron_right, size: 16, color: Colors.grey.shade400),
           ],
         ),
