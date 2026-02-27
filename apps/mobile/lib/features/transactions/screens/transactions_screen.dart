@@ -377,16 +377,39 @@ class TransactionsScreen extends ConsumerWidget {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
+                      horizontal: 16, vertical: 6),
                   color:
                       Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: Text(
-                    '${txns.length} result${txns.length == 1 ? '' : 's'} · '
-                    '${CurrencyFormatter.format(filteredTotal, 'ZAR')} total',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${txns.length} result${txns.length == 1 ? '' : 's'} · '
+                          '${CurrencyFormatter.format(filteredTotal, 'ZAR')} total',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
                         ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          ref.read(_txnSearchProvider.notifier).state = '';
+                          ref.read(_txnCategoryFilterProvider.notifier).state = null;
+                          ref.read(_txnDateRangeProvider.notifier).state = _TxnDateRange.all;
+                          ref.read(_txnAmountRangeProvider.notifier).state = (null, null);
+                          ref.read(_txnTaxFilterProvider.notifier).state = false;
+                        },
+                        child: Text(
+                          'Clear',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               Expanded(
