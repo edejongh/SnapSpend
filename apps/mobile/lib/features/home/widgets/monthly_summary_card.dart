@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/goal_provider.dart';
@@ -37,6 +38,7 @@ class MonthlySummaryCard extends ConsumerWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
+        onTap: () => context.push('/reports'),
         onLongPress: () => _setGoal(context, ref, monthlyGoal),
         child: Padding(
         padding: const EdgeInsets.all(20),

@@ -83,21 +83,39 @@ class _NotificationBell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final alerts = ref.watch(budgetAlertsProvider);
+    final count = alerts.length;
     return IconButton(
       icon: Stack(
         clipBehavior: Clip.none,
         children: [
           const Icon(Icons.notifications_outlined),
-          if (alerts.isNotEmpty)
+          if (count > 0)
             Positioned(
-              top: -2,
-              right: -2,
+              top: -4,
+              right: -4,
               child: Container(
-                width: 8,
-                height: 8,
+                padding: count > 9
+                    ? const EdgeInsets.symmetric(horizontal: 3, vertical: 1)
+                    : null,
+                width: count > 9 ? null : 16,
+                height: 16,
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.error,
-                  shape: BoxShape.circle,
+                  shape: count > 9 ? BoxShape.rectangle : BoxShape.circle,
+                  borderRadius: count > 9
+                      ? BorderRadius.circular(8)
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    count > 9 ? '9+' : '$count',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      height: 1,
+                    ),
+                  ),
                 ),
               ),
             ),
