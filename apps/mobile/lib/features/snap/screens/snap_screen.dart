@@ -185,6 +185,8 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
         fit: StackFit.expand,
         children: [
           _buildCameraBody(),
+          if (!_isProcessing && _controller?.value.isInitialized == true)
+            const _ScanGuideOverlay(),
           if (_isProcessing) const OcrOverlayWidget(),
         ],
       ),
@@ -270,4 +272,157 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
 
     return CameraPreviewWidget(controller: _controller!);
   }
+}
+
+// ── Scan guide overlay ────────────────────────────────────────────────────────
+
+class _ScanGuideOverlay extends StatelessWidget {
+  const _ScanGuideOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Guide rect: 80% wide, 55% tall, centred slightly above middle
+        final w = constraints.maxWidth * 0.82;
+        final h = constraints.maxHeight * 0.52;
+        final left = (constraints.maxWidth - w) / 2;
+        final top = (constraints.maxHeight - h) / 2 - 24;
+
+        return Stack(
+          children: [
+            // Semi-transparent surround
+            ClipPath(
+              clipper: _GuideClipper(
+                  rect: Rect.fromLTWH(left, top, w, h)),
+              child: Container(color: Colors.black54),
+            ),
+            // Corner brackets
+            Positioned(
+              left: left,
+              top: top,
+              child: _CornerBrackets(width: w, height: h),
+            ),
+            // Hint text below the guide
+            Positioned(
+              left: 0,
+              right: 0,
+              top: top + h + 12,
+              child: const Center(
+                child: Text(
+                  'Align receipt within the frame',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _GuideClipper extends CustomClipper<Path> {
+  final Rect rect;
+  const _GuideClipper({required this.rect});
+
+  @override
+  Path getClip(Size size) {
+    return Path()
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)))
+      ..fillType = PathFillType.evenOdd;
+  }
+
+  @override
+  bool shouldReclip(_GuideClipper old) => old.rect != rect;
+}
+
+class _CornerBrackets extends StatelessWidget {
+  final double width;
+  final double height;
+  const _CornerBrackets({required this.width, required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    const len = 24.0;
+    const thick = 3.0;
+    const color = Colors.white;
+
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Stack(
+        children: [
+          // Top-left
+          _Bracket(top: 0, left: 0, lenH: len, lenV: len, thick: thick, color: color),
+          // Top-right
+          _Bracket(top: 0, right: 0, lenH: len, lenV: len, thick: thick, color: color, flipH: true),
+          // Bottom-left
+          _Bracket(bottom: 0, left: 0, lenH: len, lenV: len, thick: thick, color: color, flipV: true),
+          // Bottom-right
+          _Bracket(bottom: 0, right: 0, lenH: len, lenV: len, thick: thick, color: color, flipH: true, flipV: true),
+        ],
+      ),
+    );
+  }
+}
+
+class _Bracket extends StatelessWidget {
+  final double? top, bottom, left, right;
+  final double lenH, lenV, thick;
+  final Color color;
+  final bool flipH, flipV;
+  const _Bracket({
+    this.top, this.bottom, this.left, this.right,
+    required this.lenH, required this.lenV,
+    required this.thick, required this.color,
+    this.flipH = false, this.flipV = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: top, bottom: bottom, left: left, right: right,
+      child: SizedBox(
+        width: lenH,
+        height: lenV,
+        child: CustomPaint(
+          painter: _BracketPainter(
+              thick: thick, color: color, flipH: flipH, flipV: flipV),
+        ),
+      ),
+    );
+  }
+}
+
+class _BracketPainter extends CustomPainter {
+  final double thick;
+  final Color color;
+  final bool flipH, flipV;
+  const _BracketPainter(
+      {required this.thick, required this.color, required this.flipH, required this.flipV});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = thick
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    final x = flipH ? size.width : 0.0;
+    final y = flipV ? size.height : 0.0;
+    final dx = flipH ? -size.width : size.width;
+    final dy = flipV ? -size.height : size.height;
+
+    canvas.drawLine(Offset(x, y), Offset(x + dx, y), paint);
+    canvas.drawLine(Offset(x, y), Offset(x, y + dy), paint);
+  }
+
+  @override
+  bool shouldRepaint(_BracketPainter old) => false;
 }
