@@ -101,6 +101,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => TransactionsScreen(
           initialCategory: state.extra as String?,
           initialSearch: state.uri.queryParameters['search'],
+          initialFlagged: state.uri.queryParameters.containsKey('flagged'),
         ),
       ),
       GoRoute(

@@ -198,7 +198,7 @@ class _FlaggedReceiptsBanner extends ConsumerWidget {
     if (flagged.isEmpty) return const SizedBox.shrink();
 
     return GestureDetector(
-      onTap: () => context.push('/transactions'),
+      onTap: () => context.push('/transactions?flagged=1'),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

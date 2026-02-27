@@ -55,6 +55,10 @@ final _txnAmountRangeProvider =
 final _txnTaxFilterProvider =
     StateProvider.autoDispose<bool>((ref) => false);
 
+// Show only flagged-for-review transactions when true
+final _txnFlaggedFilterProvider =
+    StateProvider.autoDispose<bool>((ref) => false);
+
 // Multi-select mode
 final _selectionModeProvider =
     StateProvider.autoDispose<bool>((ref) => false);
@@ -64,7 +68,13 @@ final _selectedTxnIdsProvider =
 class TransactionsScreen extends ConsumerWidget {
   final String? initialCategory;
   final String? initialSearch;
-  const TransactionsScreen({super.key, this.initialCategory, this.initialSearch});
+  final bool initialFlagged;
+  const TransactionsScreen({
+    super.key,
+    this.initialCategory,
+    this.initialSearch,
+    this.initialFlagged = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -76,6 +86,7 @@ class TransactionsScreen extends ConsumerWidget {
     final dateRange = ref.watch(_txnDateRangeProvider);
     final amountRange = ref.watch(_txnAmountRangeProvider);
     final taxOnly = ref.watch(_txnTaxFilterProvider);
+    final flaggedOnly = ref.watch(_txnFlaggedFilterProvider);
     final selectionMode = ref.watch(_selectionModeProvider);
     final selectedIds = ref.watch(_selectedTxnIdsProvider);
 
@@ -90,6 +101,13 @@ class TransactionsScreen extends ConsumerWidget {
     if (initialSearch != null && query.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(_txnSearchProvider.notifier).state = initialSearch!;
+      });
+    }
+
+    // Apply deep-link flagged filter on first build
+    if (initialFlagged && !flaggedOnly) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(_txnFlaggedFilterProvider.notifier).state = true;
       });
     }
 
@@ -155,6 +173,18 @@ class TransactionsScreen extends ConsumerWidget {
           : AppBar(
         title: const Text('Transactions'),
         actions: [
+          IconButton(
+            icon: Icon(
+              Icons.rate_review_outlined,
+              color: flaggedOnly
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
+            ),
+            tooltip: flaggedOnly ? 'Showing flagged only' : 'Flagged for review only',
+            onPressed: () => ref
+                .read(_txnFlaggedFilterProvider.notifier)
+                .state = !flaggedOnly,
+          ),
           IconButton(
             icon: Icon(
               Icons.verified_outlined,
@@ -373,6 +403,10 @@ class TransactionsScreen extends ConsumerWidget {
             txns = txns.where((t) => t.isTaxDeductible).toList();
           }
 
+          if (flaggedOnly) {
+            txns = txns.where((t) => t.flaggedForReview).toList();
+          }
+
           if (amountRange.$1 != null || amountRange.$2 != null) {
             txns = txns.where((t) {
               if (amountRange.$1 != null && t.amountZAR < amountRange.$1!)
@@ -387,7 +421,8 @@ class TransactionsScreen extends ConsumerWidget {
             txns = txns.where((t) {
               return t.vendor.toLowerCase().contains(query) ||
                   t.category.toLowerCase().contains(query) ||
-                  (t.note?.toLowerCase().contains(query) ?? false);
+                  (t.note?.toLowerCase().contains(query) ?? false) ||
+                  (t.ocrRawText?.toLowerCase().contains(query) ?? false);
             }).toList();
           }
 
@@ -408,11 +443,16 @@ class TransactionsScreen extends ConsumerWidget {
           }
 
           if (txns.isEmpty) {
-            if (query.isNotEmpty || categoryFilter != null) {
-              return const Center(
+            if (query.isNotEmpty ||
+                categoryFilter != null ||
+                taxOnly ||
+                flaggedOnly) {
+              return Center(
                 child: Text(
-                  'No matching transactions',
-                  style: TextStyle(color: Colors.grey),
+                  flaggedOnly
+                      ? 'No flagged transactions'
+                      : 'No matching transactions',
+                  style: const TextStyle(color: Colors.grey),
                 ),
               );
             }
@@ -432,7 +472,8 @@ class TransactionsScreen extends ConsumerWidget {
               dateRange != _TxnDateRange.all ||
               amountRange.$1 != null ||
               amountRange.$2 != null ||
-              taxOnly;
+              taxOnly ||
+              flaggedOnly;
 
           // Group by date
           final groups = <String, List<TransactionModel>>{};
@@ -478,6 +519,7 @@ class TransactionsScreen extends ConsumerWidget {
                           ref.read(_txnDateRangeProvider.notifier).state = _TxnDateRange.all;
                           ref.read(_txnAmountRangeProvider.notifier).state = (null, null);
                           ref.read(_txnTaxFilterProvider.notifier).state = false;
+                          ref.read(_txnFlaggedFilterProvider.notifier).state = false;
                         },
                         child: Text(
                           'Clear',
