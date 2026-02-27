@@ -98,12 +98,17 @@ class _BudgetProgressRow extends ConsumerWidget {
             ? Colors.amber.shade600
             : Theme.of(context).colorScheme.primary;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: budget.categoryId != null
+          ? () => context.go('/transactions', extra: budget.categoryId)
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
             children: [
               if (category != null)
                 Text(category.icon,
@@ -142,6 +147,7 @@ class _BudgetProgressRow extends ConsumerWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

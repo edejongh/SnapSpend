@@ -97,7 +97,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/transactions',
-        builder: (context, state) => const TransactionsScreen(),
+        builder: (context, state) => TransactionsScreen(
+          initialCategory: state.extra as String?,
+        ),
       ),
       GoRoute(
         path: '/edit-transaction',

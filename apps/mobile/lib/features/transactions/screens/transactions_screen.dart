@@ -44,7 +44,8 @@ final _txnDateRangeProvider =
     StateProvider.autoDispose<_TxnDateRange>((ref) => _TxnDateRange.all);
 
 class TransactionsScreen extends ConsumerWidget {
-  const TransactionsScreen({super.key});
+  final String? initialCategory;
+  const TransactionsScreen({super.key, this.initialCategory});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,6 +55,13 @@ class TransactionsScreen extends ConsumerWidget {
     final categories = ref.watch(categoriesProvider);
     final sort = ref.watch(_txnSortProvider);
     final dateRange = ref.watch(_txnDateRangeProvider);
+
+    // Apply deep-link category on first build (provider is null on fresh open)
+    if (initialCategory != null && categoryFilter == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(_txnCategoryFilterProvider.notifier).state = initialCategory;
+      });
+    }
 
     return AppScaffold(
       appBar: AppBar(

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:snapspend_core/snapspend_core.dart';
+import '../../../core/providers/scan_provider.dart';
 import '../../../core/services/ocr_service_impl.dart';
 import '../widgets/camera_preview_widget.dart';
 import '../widgets/ocr_overlay_widget.dart';
@@ -121,6 +122,9 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
     try {
       final result = await _ocrService.processImage(imagePath);
       if (!mounted) return;
+      // Increment scan counter
+      final newCount = await ScanCountService.increment();
+      ref.read(monthlyScanCountProvider.notifier).state = newCount;
       // Attach the local image path so the review screen can upload it
       final resultWithPath = OcrResult(
         rawText: result.rawText,
@@ -144,6 +148,9 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
 
   @override
   Widget build(BuildContext context) {
+    final scanCount = ref.watch(monthlyScanCountProvider);
+    final remaining = scansRemaining(scanCount);
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -151,6 +158,22 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
         foregroundColor: Colors.white,
         title: const Text('Snap Receipt'),
         actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: remaining <= 5
+                    ? Colors.red.withOpacity(0.8)
+                    : Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$remaining scans left',
+                style: const TextStyle(fontSize: 12, color: Colors.white),
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.photo_library_outlined),
             tooltip: 'Import from gallery',
