@@ -6,11 +6,13 @@ import 'package:snapspend_core/snapspend_core.dart';
 class SpendingCalendar extends StatelessWidget {
   final Map<String, double> dailySpend;
   final DateTime month; // any day in the target month
+  final void Function(DateTime day)? onDayTap;
 
   const SpendingCalendar({
     super.key,
     required this.dailySpend,
     required this.month,
+    this.onDayTap,
   });
 
   @override
@@ -79,6 +81,10 @@ class SpendingCalendar extends StatelessWidget {
               message: spend > 0
                   ? 'Day $day: ${CurrencyFormatter.format(spend, 'ZAR')}'
                   : 'Day $day: no spending',
+              child: GestureDetector(
+                onTap: spend > 0
+                    ? () => onDayTap?.call(DateTime(year, m, day))
+                    : null,
               child: Container(
                 decoration: BoxDecoration(
                   color: spend > 0
@@ -108,6 +114,7 @@ class SpendingCalendar extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
               ),
             );
           },

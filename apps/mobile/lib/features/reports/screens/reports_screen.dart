@@ -75,6 +75,7 @@ class ReportsScreen extends ConsumerWidget {
                       ? DateTime(
                           DateTime.now().year, DateTime.now().month - 1)
                       : DateTime.now(),
+                  onDayTap: (day) => _showDayTransactions(context, ref, day),
                 ),
               ),
               const SizedBox(height: 16),
@@ -159,6 +160,85 @@ class ReportsScreen extends ConsumerWidget {
     await Share.shareXFiles(
       [XFile(file.path, mimeType: 'text/csv')],
       subject: 'SnapSpend Export — $period',
+    );
+  }
+
+  void _showDayTransactions(
+      BuildContext context, WidgetRef ref, DateTime day) {
+    final allTxns =
+        ref.read(reportTransactionsProvider);
+    final dayTxns = allTxns
+        .where((t) =>
+            t.date.year == day.year &&
+            t.date.month == day.month &&
+            t.date.day == day.day)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    if (dayTxns.isEmpty) return;
+
+    final dayTotal =
+        dayTxns.fold(0.0, (sum, t) => sum + t.amountZAR);
+    final dayLabel = DateFormatter.formatDate(day);
+
+    showModalBottomSheet(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        maxChildSize: 0.9,
+        minChildSize: 0.3,
+        expand: false,
+        builder: (ctx, controller) => ListView(
+          controller: controller,
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  dayLabel,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  CurrencyFormatter.format(dayTotal, 'ZAR'),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            for (final t in dayTxns)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(t.vendor,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(t.category),
+                trailing: Text(
+                  CurrencyFormatter.format(t.amountZAR, 'ZAR'),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
