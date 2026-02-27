@@ -30,7 +30,12 @@ class TransactionListTile extends StatelessWidget {
           transaction.vendor,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Text(DateFormatter.formatRelative(transaction.date)),
+        subtitle: transaction.note != null && transaction.note!.isNotEmpty
+            ? Text(
+                '${DateFormatter.formatRelative(transaction.date)} · ${transaction.note!}',
+                overflow: TextOverflow.ellipsis,
+              )
+            : Text(DateFormatter.formatRelative(transaction.date)),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
