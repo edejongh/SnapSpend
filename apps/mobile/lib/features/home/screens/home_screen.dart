@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/budget_provider.dart';
+import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../widgets/budget_alert_banner.dart';
@@ -42,6 +43,8 @@ class HomeScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(transactionsProvider);
+          ref.invalidate(budgetsProvider);
+          ref.invalidate(categoriesProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),

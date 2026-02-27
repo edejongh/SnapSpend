@@ -117,6 +117,44 @@ class SpendingInsightsCard extends ConsumerWidget {
       }
     }
 
+    // Budget pace warning for category budgets heading for overspend
+    {
+      final now = DateTime.now();
+      final daysElapsed = now.day;
+      final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
+      if (daysElapsed > 0) {
+        for (final budget in budgets) {
+          if (budget.categoryId == null) continue;
+          if (budget.limitAmount <= 0) continue;
+          final spend = spendByCategory[budget.categoryId] ?? 0.0;
+          if (spend <= 0) continue;
+          final util = spend / budget.limitAmount;
+          if (util >= 1.0) continue; // already exceeded
+          final dailyRate = spend / daysElapsed;
+          final projected = dailyRate * daysInMonth;
+          if (projected <= budget.limitAmount) continue;
+          final remaining = budget.limitAmount - spend;
+          final daysLeft = (remaining / dailyRate).floor();
+          final catName = categories
+                  .cast<CategoryModel?>()
+                  .firstWhere((c) => c?.categoryId == budget.categoryId,
+                      orElse: () => null)
+                  ?.name ??
+              budget.categoryId!;
+          final catId = budget.categoryId!;
+          insights.add(_Insight(
+            icon: Icons.speed_outlined,
+            color: Colors.orange.shade700,
+            text: daysLeft < 1
+                ? '$catName budget will run out today at this pace'
+                : '$catName budget on pace to run out in $daysLeft day${daysLeft == 1 ? '' : 's'}',
+            onTap: () => context.push('/transactions', extra: catId),
+          ));
+          break; // show at most one budget-pace insight
+        }
+      }
+    }
+
     // Nudge to set up a budget if none exist but there are transactions
     if (budgets.isEmpty && monthlySpend > 0) {
       insights.add(_Insight(
