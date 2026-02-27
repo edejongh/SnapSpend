@@ -242,6 +242,27 @@ final recurringTransactionsProvider =
   return recurring;
 });
 
+/// Number of consecutive days (ending today) on which at least one transaction
+/// was recorded. Returns 0 if there's no transaction today.
+final spendingStreakProvider = Provider<int>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  if (txns.isEmpty) return 0;
+
+  final txnDays = txns
+      .map((t) => DateTime(t.date.year, t.date.month, t.date.day))
+      .toSet();
+
+  final today = DateTime.now();
+  int streak = 0;
+  var day = DateTime(today.year, today.month, today.day);
+
+  while (txnDays.contains(day)) {
+    streak++;
+    day = day.subtract(const Duration(days: 1));
+  }
+  return streak;
+});
+
 // Transaction CRUD notifier
 class TransactionNotifier extends AsyncNotifier<void> {
   @override

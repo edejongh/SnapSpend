@@ -219,6 +219,7 @@ class _QuickStatsRow extends ConsumerWidget {
     final txnCount = ref.watch(monthlyTransactionCountProvider);
     final avgDaily = ref.watch(avgDailySpendProvider);
     final todaySpend = ref.watch(todaySpendProvider);
+    final streak = ref.watch(spendingStreakProvider);
 
     return Column(
       children: [
@@ -242,10 +243,26 @@ class _QuickStatsRow extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 8),
-        _StatChip(
-          icon: Icons.receipt_outlined,
-          label: 'This month',
-          value: '$txnCount transaction${txnCount == 1 ? '' : 's'} recorded',
+        Row(
+          children: [
+            Expanded(
+              child: _StatChip(
+                icon: Icons.receipt_outlined,
+                label: 'This month',
+                value: '$txnCount txn${txnCount == 1 ? '' : 's'}',
+              ),
+            ),
+            if (streak >= 2) ...[
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StatChip(
+                  icon: Icons.local_fire_department_outlined,
+                  label: 'Streak',
+                  value: '$streak day${streak == 1 ? '' : 's'} 🔥',
+                ),
+              ),
+            ],
+          ],
         ),
       ],
     );
