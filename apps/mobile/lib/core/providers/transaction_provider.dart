@@ -1,4 +1,5 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import 'auth_provider.dart';
@@ -98,6 +99,32 @@ final avgDailySpendProvider = Provider<double>((ref) {
 final flaggedTransactionsProvider = Provider<List<TransactionModel>>((ref) {
   final txns = ref.watch(transactionsProvider).asData?.value ?? [];
   return txns.where((t) => t.flaggedForReview).toList();
+});
+
+// Daily spend for the last 7 days, ordered oldest-first (day, total)
+final weeklyDailySpendProvider =
+    Provider<List<(DateTime, double)>>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  final today = DateTime.now();
+  return List.generate(7, (i) {
+    final day = today.subtract(Duration(days: 6 - i));
+    final key = DateTime(day.year, day.month, day.day);
+    final total = txns
+        .where((t) =>
+            t.date.year == key.year &&
+            t.date.month == key.month &&
+            t.date.day == key.day)
+        .fold(0.0, (sum, t) => sum + t.amountZAR);
+    return (key, total);
+  });
+});
+
+// Projected full-month spend based on daily average so far
+final projectedMonthlySpendProvider = Provider<double>((ref) {
+  final avgDaily = ref.watch(avgDailySpendProvider);
+  final now = DateTime.now();
+  final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
+  return avgDaily * daysInMonth;
 });
 
 // Spend by category this month

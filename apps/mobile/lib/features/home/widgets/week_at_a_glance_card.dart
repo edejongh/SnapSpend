@@ -1,0 +1,125 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:snapspend_core/snapspend_core.dart';
+import '../../../core/providers/transaction_provider.dart';
+
+class WeekAtAGlanceCard extends ConsumerWidget {
+  const WeekAtAGlanceCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(weeklyDailySpendProvider);
+    final maxSpend = data.map((e) => e.$2).fold(0.0, max);
+    final weekTotal = data.fold(0.0, (sum, e) => sum + e.$2);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Last 7 Days',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                if (weekTotal > 0)
+                  Text(
+                    CurrencyFormatter.format(weekTotal, 'ZAR'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 80,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: data.map((entry) {
+                  final (day, amount) = entry;
+                  final isToday = _isToday(day);
+                  final fraction =
+                      maxSpend > 0 ? (amount / maxSpend) : 0.0;
+                  final barHeight = (fraction * 52).clamp(4.0, 52.0);
+
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (isToday && amount > 0) ...[
+                            Text(
+                              CurrencyFormatter.format(amount, 'ZAR'),
+                              style: TextStyle(
+                                fontSize: 9,
+                                color:
+                                    Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                            ),
+                            const SizedBox(height: 2),
+                          ],
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 600),
+                            curve: Curves.easeOut,
+                            height: barHeight,
+                            decoration: BoxDecoration(
+                              color: isToday
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _dayLabel(day),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isToday
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.grey.shade500,
+                              fontWeight: isToday
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool _isToday(DateTime day) {
+    final now = DateTime.now();
+    return day.year == now.year &&
+        day.month == now.month &&
+        day.day == now.day;
+  }
+
+  String _dayLabel(DateTime day) {
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return labels[day.weekday - 1];
+  }
+}

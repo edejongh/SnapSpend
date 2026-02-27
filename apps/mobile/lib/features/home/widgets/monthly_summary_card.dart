@@ -11,6 +11,7 @@ class MonthlySummaryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final monthlySpend = ref.watch(monthlySpendProvider);
     final lastMonthSpend = ref.watch(lastMonthSpendProvider);
+    final projectedMonthly = ref.watch(projectedMonthlySpendProvider);
     final spendByCategory = ref.watch(spendByCategoryProvider);
     final now = DateTime.now();
     final monthLabel = DateFormatter.formatMonthYear(now);
@@ -86,6 +87,22 @@ class MonthlySummaryCard extends ConsumerWidget {
                 'Total spend this month',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+            if (projectedMonthly > monthlySpend) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.trending_flat,
+                      size: 13, color: Colors.grey.shade500),
+                  const SizedBox(width: 4),
+                  Text(
+                    'On track for ${CurrencyFormatter.format(projectedMonthly, 'ZAR')}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey.shade500,
+                        ),
+                  ),
+                ],
+              ),
+            ],
             if (topEntry != null) ...[
               const SizedBox(height: 10),
               const Divider(height: 1),
