@@ -19,6 +19,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
+  late String _selectedCurrency;
   bool _isSaving = false;
   bool _isUploadingPhoto = false;
   String? _error;
@@ -28,6 +29,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     super.initState();
     final user = FirebaseAuth.instance.currentUser;
     _nameCtrl.text = user?.displayName ?? '';
+    // Will be overwritten once currentUserProvider resolves
+    _selectedCurrency = AppConstants.defaultCurrency;
   }
 
   @override
@@ -184,9 +187,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       // Update Firestore UserModel
       final userModel = await ref.read(currentUserProvider.future);
       if (userModel != null) {
-        await ref
-            .read(firebaseServiceProvider)
-            .saveUser(userModel.copyWith(displayName: newName));
+        final updated = userModel.copyWith(
+          displayName: newName,
+          defaultCurrency: _selectedCurrency,
+        );
+        await ref.read(firebaseServiceProvider).saveUser(updated);
         ref.invalidate(currentUserProvider);
       }
 
@@ -217,7 +222,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       body: userAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data: (userModel) => ListView(
+        data: (userModel) {
+          // Sync currency once model loads (only overwrite if still default)
+          if (userModel != null &&
+              _selectedCurrency == AppConstants.defaultCurrency) {
+            _selectedCurrency = userModel.defaultCurrency;
+          }
+          return ListView(
           padding: const EdgeInsets.all(24),
           children: [
             Center(
@@ -293,6 +304,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     validator: (v) =>
                         Validators.required(v, fieldName: 'Display name'),
                   ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: _selectedCurrency,
+                    decoration: const InputDecoration(
+                      labelText: 'Default currency',
+                      prefixIcon: Icon(Icons.currency_exchange_outlined),
+                    ),
+                    items: AppConstants.supportedCurrencies
+                        .map((c) => DropdownMenuItem(
+                              value: c,
+                              child: Text(c),
+                            ))
+                        .toList(),
+                    onChanged: (c) {
+                      if (c != null) setState(() => _selectedCurrency = c);
+                    },
+                  ),
                   if (userModel != null) ...[
                     const SizedBox(height: 16),
                     TextFormField(
@@ -337,7 +365,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
           ],
-        ),
+        );
+        },
       ),
     );
   }

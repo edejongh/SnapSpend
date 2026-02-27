@@ -662,7 +662,7 @@ class _TransactionDetailSheet extends ConsumerWidget {
           if (t.flaggedForReview)
             Container(
               margin: const EdgeInsets.only(top: 12),
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
               decoration: BoxDecoration(
                 color: Colors.amber.shade50,
                 border: Border.all(color: Colors.amber.shade300),
@@ -674,6 +674,22 @@ class _TransactionDetailSheet extends ConsumerWidget {
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text('Flagged for review — low OCR confidence'),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      await ref
+                          .read(transactionNotifierProvider.notifier)
+                          .updateTransaction(
+                              t.copyWith(flaggedForReview: false));
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.amber.shade800,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('Dismiss'),
                   ),
                 ],
               ),
