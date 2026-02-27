@@ -9,6 +9,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/providers/hive_provider.dart';
+import 'core/providers/goal_provider.dart';
 import 'core/providers/scan_provider.dart';
 import 'core/providers/theme_provider.dart';
 import 'core/services/firebase_service_impl.dart';
@@ -99,6 +100,8 @@ void main() async {
   await container.read(themeModeProvider.notifier).load();
   container.read(monthlyScanCountProvider.notifier).state =
       await ScanCountService.load();
+  container.read(monthlyGoalProvider.notifier).state =
+      await MonthlyGoalService.load();
 
   runApp(
     UncontrolledProviderScope(
