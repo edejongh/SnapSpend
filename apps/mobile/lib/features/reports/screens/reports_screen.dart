@@ -57,6 +57,15 @@ class ReportsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             _TotalCard(total: total, period: period, previousTotal: previousTotal),
+            if (total > 0) ...[
+              const SizedBox(height: 12),
+              _PeriodSummaryCard(
+                period: period,
+                total: total,
+                previousTotal: previousTotal,
+                spendByCategory: spendByCategory,
+              ),
+            ],
             const SizedBox(height: 16),
             if (spendByMonth.isNotEmpty) ...[
               _SectionCard(
@@ -320,6 +329,108 @@ class _TotalCard extends StatelessWidget {
                 'Total spend',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Period summary card ───────────────────────────────────────────────────────
+
+class _PeriodSummaryCard extends ConsumerWidget {
+  final String period;
+  final double total;
+  final double previousTotal;
+  final Map<String, double> spendByCategory;
+
+  const _PeriodSummaryCard({
+    required this.period,
+    required this.total,
+    required this.previousTotal,
+    required this.spendByCategory,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final txns = ref.watch(reportTransactionsProvider);
+    final categories = ref.watch(categoriesProvider);
+    final catById = {for (final c in categories) c.categoryId: c};
+
+    // Top category by spend
+    String? topCatName;
+    double topCatAmount = 0;
+    if (spendByCategory.isNotEmpty) {
+      final top = spendByCategory.entries
+          .reduce((a, b) => a.value >= b.value ? a : b);
+      topCatName = catById[top.key]?.name ?? top.key;
+      topCatAmount = top.value;
+    }
+
+    // Top vendor by visit count
+    final vendorCounts = <String, int>{};
+    for (final t in txns) {
+      vendorCounts[t.vendor] = (vendorCounts[t.vendor] ?? 0) + 1;
+    }
+    final topVendorEntry = vendorCounts.isEmpty
+        ? null
+        : vendorCounts.entries.reduce((a, b) => a.value >= b.value ? a : b);
+
+    // Comparison sentence
+    final hasDelta = previousTotal > 0;
+    final delta = total - previousTotal;
+    final isUp = delta > 0;
+    final deltaPct =
+        hasDelta ? (delta / previousTotal * 100).abs().toStringAsFixed(0) : '';
+
+    final sentences = <String>[];
+    if (hasDelta) {
+      sentences.add(
+        '${isUp ? 'Up' : 'Down'} $deltaPct% vs the previous period '
+        '(${CurrencyFormatter.format(delta.abs(), 'ZAR')} ${isUp ? 'more' : 'less'}).',
+      );
+    }
+    if (topCatName != null) {
+      final pct = total > 0
+          ? ' · ${(topCatAmount / total * 100).toStringAsFixed(0)}%'
+          : '';
+      sentences.add(
+          'Biggest category: $topCatName (${CurrencyFormatter.format(topCatAmount, 'ZAR')}$pct).');
+    }
+    if (topVendorEntry != null && topVendorEntry.value >= 2) {
+      sentences.add(
+          'Most visited: ${topVendorEntry.key} (${topVendorEntry.value}×).');
+    }
+    if (txns.isNotEmpty) {
+      sentences.add('${txns.length} transaction${txns.length == 1 ? '' : 's'} recorded.');
+    }
+
+    if (sentences.isEmpty) return const SizedBox.shrink();
+
+    return Card(
+      color: Theme.of(context)
+          .colorScheme
+          .primaryContainer
+          .withValues(alpha: 0.4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.lightbulb_outline,
+              size: 18,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                sentences.join('  '),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      height: 1.5,
+                    ),
+              ),
+            ),
           ],
         ),
       ),
