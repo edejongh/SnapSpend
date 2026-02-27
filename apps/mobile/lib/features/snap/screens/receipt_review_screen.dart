@@ -207,7 +207,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
             if (lowConfidence)
               Container(
                 margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
                 decoration: BoxDecoration(
                   color: Colors.amber.shade50,
                   border: Border.all(color: Colors.amber.shade300),
@@ -219,9 +219,19 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'OCR confidence is low — please review',
-                        style: TextStyle(color: Colors.amber.shade900),
+                        'OCR confidence is low — please review carefully',
+                        style: TextStyle(color: Colors.amber.shade900, fontSize: 13),
                       ),
+                    ),
+                    TextButton(
+                      onPressed: () => context.pop(),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.amber.shade800,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Retake', style: TextStyle(fontSize: 13)),
                     ),
                   ],
                 ),
