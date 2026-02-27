@@ -165,6 +165,21 @@ final reportTaxTransactionsProvider =
       .toList();
 });
 
+/// Daily spend totals for a single-month period. Key = "YYYY-MM-DD".
+/// Only populated when the selected period is a single month.
+final reportSpendByDayProvider = Provider<Map<String, double>>((ref) {
+  final period = ref.watch(reportPeriodProvider);
+  if (period != 'This Month' && period != 'Last Month') return {};
+  final txns = ref.watch(reportTransactionsProvider);
+  final map = <String, double>{};
+  for (final t in txns) {
+    final key =
+        '${t.date.year}-${t.date.month.toString().padLeft(2, '0')}-${t.date.day.toString().padLeft(2, '0')}';
+    map[key] = (map[key] ?? 0.0) + t.amountZAR;
+  }
+  return map;
+});
+
 String _monthLabel(DateTime date) {
   const abbr = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',

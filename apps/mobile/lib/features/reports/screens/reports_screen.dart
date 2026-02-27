@@ -13,6 +13,7 @@ import '../../../shared/widgets/app_scaffold.dart';
 import '../widgets/category_pie_chart.dart';
 import '../widgets/filter_bar.dart';
 import '../widgets/spending_bar_chart.dart';
+import '../widgets/spending_calendar.dart';
 
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
@@ -28,6 +29,7 @@ class ReportsScreen extends ConsumerWidget {
     final taxTxns = ref.watch(reportTaxTransactionsProvider);
     final dayOfWeekSpend = ref.watch(reportSpendByDayOfWeekProvider);
     final topVendors = ref.watch(reportTopVendorsProvider);
+    final dailySpend = ref.watch(reportSpendByDayProvider);
     final txnsAsync = ref.watch(transactionsProvider);
 
     return AppScaffold(
@@ -61,6 +63,19 @@ class ReportsScreen extends ConsumerWidget {
                 title: 'Spending by Month',
                 height: 200,
                 child: SpendingBarChart(dataByMonth: spendByMonth),
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (dailySpend.isNotEmpty) ...[
+              _SectionCard(
+                title: 'Daily Spending Heatmap',
+                child: SpendingCalendar(
+                  dailySpend: dailySpend,
+                  month: period == 'Last Month'
+                      ? DateTime(
+                          DateTime.now().year, DateTime.now().month - 1)
+                      : DateTime.now(),
+                ),
               ),
               const SizedBox(height: 16),
             ],
@@ -234,12 +249,12 @@ class _TotalCard extends StatelessWidget {
 
 class _SectionCard extends StatelessWidget {
   final String title;
-  final double height;
+  final double? height;
   final Widget child;
 
   const _SectionCard({
     required this.title,
-    required this.height,
+    this.height,
     required this.child,
   });
 
@@ -259,7 +274,7 @@ class _SectionCard extends StatelessWidget {
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            SizedBox(height: height, child: child),
+            height != null ? SizedBox(height: height, child: child) : child,
           ],
         ),
       ),
