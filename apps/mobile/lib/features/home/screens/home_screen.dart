@@ -33,6 +33,11 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text('$greeting, $displayName'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search transactions',
+            onPressed: () => context.push('/transactions'),
+          ),
           _NotificationBell(),
         ],
       ),
