@@ -22,6 +22,7 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
   bool _isInitializing = true;
   bool _isProcessing = false;
   String? _initError;
+  FlashMode _flashMode = FlashMode.off;
   final _imagePicker = ImagePicker();
   final _ocrService = OcrServiceImpl();
 
@@ -72,12 +73,26 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
     }
   }
 
+  Future<void> _toggleFlash() async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    final next =
+        _flashMode == FlashMode.off ? FlashMode.torch : FlashMode.off;
+    try {
+      await controller.setFlashMode(next);
+      if (mounted) setState(() => _flashMode = next);
+    } catch (_) {
+      // Flash not available on this device — silently ignore
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) return;
     if (state == AppLifecycleState.inactive) {
       controller.dispose();
+      if (mounted) setState(() => _flashMode = FlashMode.off);
     } else if (state == AppLifecycleState.resumed) {
       _initCamera();
     }
@@ -95,6 +110,7 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) return;
     if (_isProcessing) return;
+    if (!_checkScansAvailable()) return;
     try {
       final file = await controller.takePicture();
       await _processImage(file.path);
@@ -108,6 +124,7 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
   }
 
   Future<void> _captureFromGallery() async {
+    if (!_checkScansAvailable()) return;
     final file = await _imagePicker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 90,
@@ -115,6 +132,22 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
     );
     if (file == null || !mounted) return;
     await _processImage(file.path);
+  }
+
+  bool _checkScansAvailable() {
+    final scanCount = ref.read(monthlyScanCountProvider);
+    final remaining = scansRemaining(scanCount);
+    if (remaining > 0) return true;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Monthly scan limit reached'),
+        action: SnackBarAction(
+          label: 'Enter manually',
+          onPressed: () => context.push('/snap/review'),
+        ),
+      ),
+    );
+    return false;
   }
 
   Future<void> _processImage(String imagePath) async {
@@ -173,6 +206,19 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
                 style: const TextStyle(fontSize: 12, color: Colors.white),
               ),
             ),
+          ),
+          IconButton(
+            icon: Icon(
+              _flashMode == FlashMode.torch
+                  ? Icons.flashlight_on
+                  : Icons.flashlight_off,
+            ),
+            tooltip: _flashMode == FlashMode.torch
+                ? 'Turn off torch'
+                : 'Turn on torch',
+            onPressed: _controller?.value.isInitialized == true
+                ? _toggleFlash
+                : null,
           ),
           IconButton(
             icon: const Icon(Icons.photo_library_outlined),
