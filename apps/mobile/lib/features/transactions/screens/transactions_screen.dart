@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:snapspend_core/snapspend_core.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -750,6 +751,37 @@ class _TransactionDetailSheet extends ConsumerWidget {
   final TransactionModel transaction;
   const _TransactionDetailSheet({required this.transaction});
 
+  Future<void> _duplicateTransaction(
+      BuildContext context, WidgetRef ref, TransactionModel t) async {
+    Navigator.pop(context);
+    final duplicate = t.copyWith(
+      txnId: const Uuid().v4(),
+      date: DateTime.now(),
+      receiptStoragePath: null,
+      ocrRawText: null,
+      ocrConfidence: null,
+      flaggedForReview: false,
+      source: 'manual',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    await ref
+        .read(transactionNotifierProvider.notifier)
+        .addTransaction(duplicate);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Duplicated "${t.vendor}"'),
+          action: SnackBarAction(
+            label: 'Edit',
+            onPressed: () =>
+                context.push('/edit-transaction', extra: duplicate),
+          ),
+        ),
+      );
+    }
+  }
+
   void _shareTransaction(TransactionModel t, String? categoryName) {
     final lines = [
       '${t.vendor} — ${CurrencyFormatter.format(t.amountZAR, 'ZAR')}',
@@ -835,7 +867,18 @@ class _TransactionDetailSheet extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _duplicateTransaction(context, ref, t),
+                  icon: const Icon(Icons.copy_outlined, size: 18),
+                  label: const Text('Duplicate'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: () => _shareTransaction(t, category?.name),
                 icon: const Icon(Icons.share_outlined, size: 18),

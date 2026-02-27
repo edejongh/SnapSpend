@@ -40,6 +40,12 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/categories'),
           ),
+          ListTile(
+            leading: const Icon(Icons.notifications_outlined),
+            title: const Text('Notifications'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/notifications'),
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.brightness_6_outlined),

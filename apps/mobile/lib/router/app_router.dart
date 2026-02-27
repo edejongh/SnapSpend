@@ -15,6 +15,7 @@ import '../features/settings/screens/settings_screen.dart';
 import '../features/settings/screens/profile_screen.dart';
 import '../features/settings/screens/budget_setup_screen.dart';
 import '../features/settings/screens/categories_screen.dart';
+import '../features/settings/screens/notifications_screen.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 
 /// Notifies GoRouter whenever auth state or Firestore user data changes,
@@ -127,6 +128,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'categories',
             builder: (context, state) => const CategoriesScreen(),
+          ),
+          GoRoute(
+            path: 'notifications',
+            builder: (context, state) => const NotificationsScreen(),
           ),
         ],
       ),
