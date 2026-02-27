@@ -4,11 +4,13 @@ import 'package:snapspend_core/snapspend_core.dart';
 class TransactionListTile extends StatelessWidget {
   final TransactionModel transaction;
   final VoidCallback? onTap;
+  final String? categoryIcon;
 
   const TransactionListTile({
     super.key,
     required this.transaction,
     this.onTap,
+    this.categoryIcon,
   });
 
   @override
@@ -20,7 +22,7 @@ class TransactionListTile extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           child: Text(
-            _categoryEmoji(transaction.category),
+            categoryIcon ?? _categoryEmoji(transaction.category),
             style: const TextStyle(fontSize: 18),
           ),
         ),

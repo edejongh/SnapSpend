@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/transaction_list_tile.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
@@ -46,7 +47,15 @@ class RecentTransactionsList extends ConsumerWidget {
             return Column(
               children: txns
                   .take(5)
-                  .map((txn) => TransactionListTile(transaction: txn))
+                  .map((txn) {
+                    final category =
+                        ref.watch(categoryByIdProvider(txn.category));
+                    return TransactionListTile(
+                      transaction: txn,
+                      categoryIcon: category?.icon,
+                      onTap: () => context.push('/transactions'),
+                    );
+                  })
                   .toList(),
             );
           },
