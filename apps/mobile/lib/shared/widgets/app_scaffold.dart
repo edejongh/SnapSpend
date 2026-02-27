@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../core/providers/sync_provider.dart';
+import '../../core/providers/transaction_provider.dart';
 
 /// Shared scaffold used by all top-level tab screens.
 /// Renders the NavigationBar with the correct selected index derived
@@ -24,6 +25,8 @@ class AppScaffold extends ConsumerWidget {
     final syncStatus =
         ref.watch(syncStatusProvider).asData?.value ?? SyncStatus.idle;
     final isOnline = ref.watch(isOnlineProvider).asData?.value ?? true;
+    final flaggedCount =
+        ref.watch(flaggedTransactionsProvider).length;
     final location = GoRouterState.of(context).uri.path;
 
     return Scaffold(
@@ -72,15 +75,25 @@ class AppScaffold extends ConsumerWidget {
       floatingActionButton: floatingActionButton,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _indexForLocation(location),
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
+            icon: flaggedCount > 0
+                ? Badge(
+                    label: Text('$flaggedCount'),
+                    child: const Icon(Icons.receipt_long_outlined),
+                  )
+                : const Icon(Icons.receipt_long_outlined),
+            selectedIcon: flaggedCount > 0
+                ? Badge(
+                    label: Text('$flaggedCount'),
+                    child: const Icon(Icons.receipt_long),
+                  )
+                : const Icon(Icons.receipt_long),
             label: 'History',
           ),
           NavigationDestination(

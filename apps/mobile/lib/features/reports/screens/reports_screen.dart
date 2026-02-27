@@ -26,6 +26,7 @@ class ReportsScreen extends ConsumerWidget {
     final taxTotal = ref.watch(reportTaxDeductibleProvider);
     final taxTxns = ref.watch(reportTaxTransactionsProvider);
     final dayOfWeekSpend = ref.watch(reportSpendByDayOfWeekProvider);
+    final topVendors = ref.watch(reportTopVendorsProvider);
     final txnsAsync = ref.watch(transactionsProvider);
 
     return AppScaffold(
@@ -73,6 +74,10 @@ class ReportsScreen extends ConsumerWidget {
                 spendByCategory: spendByCategory,
                 total: total,
               ),
+            ],
+            if (topVendors.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _TopVendorsCard(vendors: topVendors, total: total),
             ],
             if (dayOfWeekSpend.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -411,6 +416,77 @@ class _TaxSummaryCard extends ConsumerWidget {
                 ),
               );
             }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Top vendors ───────────────────────────────────────────────────────────────
+
+class _TopVendorsCard extends StatelessWidget {
+  final List<MapEntry<String, double>> vendors;
+  final double total;
+  const _TopVendorsCard({required this.vendors, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Top Vendors',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            for (final entry in vendors) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              entry.key,
+                              style:
+                                  Theme.of(context).textTheme.bodyMedium,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              CurrencyFormatter.format(
+                                  entry.value, 'ZAR'),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        LinearProgressIndicator(
+                          value: total > 0 ? entry.value / total : 0,
+                          backgroundColor: Colors.grey.shade200,
+                          minHeight: 4,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+            ],
           ],
         ),
       ),

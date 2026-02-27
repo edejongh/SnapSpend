@@ -135,6 +135,19 @@ final reportSpendByDayOfWeekProvider = Provider<Map<int, double>>((ref) {
   return {for (final d in sums.keys) d: sums[d]! / counts[d]!};
 });
 
+/// Top 5 vendors by spend in the selected period.
+final reportTopVendorsProvider =
+    Provider<List<MapEntry<String, double>>>((ref) {
+  final txns = ref.watch(reportTransactionsProvider);
+  final map = <String, double>{};
+  for (final t in txns) {
+    map[t.vendor] = (map[t.vendor] ?? 0.0) + t.amountZAR;
+  }
+  final sorted = map.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+  return sorted.take(5).toList();
+});
+
 /// Total tax-deductible spend in the selected period.
 final reportTaxDeductibleProvider = Provider<double>((ref) {
   return ref
