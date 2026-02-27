@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,6 +37,8 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
   late String? _selectedCategory;
   late DateTime _selectedDate;
   late bool _isTaxDeductible;
+
+  bool _receiptExpanded = false;
 
   /// ZAR exchange rate for the selected currency (1 <currency> = _rateToZAR ZAR).
   double _rateToZAR = 1.0;
@@ -236,6 +239,16 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                   ],
                 ),
               ),
+            // Receipt image preview (for OCR scans)
+            if (ocr?.imagePath != null) ...[
+              _ReceiptPreview(
+                imagePath: ocr!.imagePath!,
+                expanded: _receiptExpanded,
+                onToggle: () =>
+                    setState(() => _receiptExpanded = !_receiptExpanded),
+              ),
+              const SizedBox(height: 12),
+            ],
             // Amount + Currency row
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,6 +369,119 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
     );
   }
 
+}
+
+// ── Receipt image preview ──────────────────────────────────────────────────────
+
+class _ReceiptPreview extends StatelessWidget {
+  final String imagePath;
+  final bool expanded;
+  final VoidCallback onToggle;
+
+  const _ReceiptPreview({
+    required this.imagePath,
+    required this.expanded,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onToggle,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Column(
+          children: [
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 250),
+              crossFadeState: expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              firstChild: SizedBox(
+                height: 80,
+                width: double.infinity,
+                child: Image.file(
+                  File(imagePath),
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+              secondChild: GestureDetector(
+                onLongPress: () => _openFullscreen(context),
+                child: Image.file(
+                  File(imagePath),
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
+            Container(
+              color: Colors.grey.shade100,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Row(
+                children: [
+                  Icon(
+                    expanded
+                        ? Icons.expand_less
+                        : Icons.expand_more,
+                    size: 16,
+                    color: Colors.grey.shade600,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    expanded ? 'Collapse receipt' : 'View receipt',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openFullscreen(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            title: const Text('Receipt'),
+            systemOverlayStyle: SystemUiOverlayStyle.light,
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 5.0,
+              child: Image.file(
+                File(imagePath),
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.broken_image_outlined,
+                  color: Colors.white54,
+                  size: 64,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ── Vendor name autocomplete suggestions ──────────────────────────────────────
