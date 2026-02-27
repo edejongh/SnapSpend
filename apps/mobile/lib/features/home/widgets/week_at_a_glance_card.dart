@@ -123,7 +123,7 @@ class WeekAtAGlanceCard extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            _dayLabel(day),
+                            '${day.day}',
                             style: TextStyle(
                               fontSize: 10,
                               color: isToday
@@ -155,8 +155,4 @@ class WeekAtAGlanceCard extends ConsumerWidget {
         day.day == now.day;
   }
 
-  String _dayLabel(DateTime day) {
-    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return labels[day.weekday - 1];
-  }
 }

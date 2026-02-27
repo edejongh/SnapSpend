@@ -1073,6 +1073,20 @@ class _TransactionTile extends ConsumerWidget {
               'Tax deductible',
               style: TextStyle(fontSize: 10, color: Colors.green),
             ),
+          if (transaction.flaggedForReview)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.rate_review_outlined,
+                    size: 10, color: Colors.amber.shade700),
+                const SizedBox(width: 2),
+                Text(
+                  'Review',
+                  style:
+                      TextStyle(fontSize: 10, color: Colors.amber.shade700),
+                ),
+              ],
+            ),
         ],
       ),
     );

@@ -21,6 +21,8 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(authStateProvider);
+    final allTxns = ref.watch(transactionsProvider).asData?.value;
+    final hasAnyTransactions = allTxns != null && allTxns.isNotEmpty;
     final greeting = _greeting();
     final firebaseUser = userAsync.asData?.value;
     final rawName = firebaseUser?.displayName ??
@@ -56,22 +58,26 @@ class HomeScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              BudgetAlertBanner(),
-              _FlaggedReceiptsBanner(),
-              MonthlySummaryCard(),
-              SizedBox(height: 12),
-              _QuickStatsRow(),
-              SizedBox(height: 12),
-              WeekAtAGlanceCard(),
-              SizedBox(height: 12),
-              SpendingInsightsCard(),
-              SizedBox(height: 12),
-              RecurringCard(),
-              SizedBox(height: 20),
-              BudgetRingChart(),
-              SizedBox(height: 20),
-              RecentTransactionsList(),
+            children: [
+              const BudgetAlertBanner(),
+              const _FlaggedReceiptsBanner(),
+              if (!hasAnyTransactions && allTxns != null)
+                const _WelcomeCard()
+              else ...[
+                const MonthlySummaryCard(),
+                const SizedBox(height: 12),
+                const _QuickStatsRow(),
+                const SizedBox(height: 12),
+                const WeekAtAGlanceCard(),
+                const SizedBox(height: 12),
+                const SpendingInsightsCard(),
+                const SizedBox(height: 12),
+                const RecurringCard(),
+                const SizedBox(height: 20),
+                const BudgetRingChart(),
+                const SizedBox(height: 20),
+                const RecentTransactionsList(),
+              ],
             ],
           ),
         ),
@@ -84,6 +90,130 @@ class HomeScreen extends ConsumerWidget {
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
+  }
+}
+
+// ── First-use welcome card ────────────────────────────────────────────────────
+
+class _WelcomeCard extends StatelessWidget {
+  const _WelcomeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.camera_alt_outlined,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome to SnapSpend',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Your spending dashboard is ready',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _WelcomeStep(
+              number: '1',
+              text: 'Tap the camera button below to scan a receipt',
+            ),
+            const SizedBox(height: 12),
+            _WelcomeStep(
+              number: '2',
+              text: 'Review and confirm the extracted details',
+            ),
+            const SizedBox(height: 12),
+            _WelcomeStep(
+              number: '3',
+              text: 'Watch your spending insights come to life',
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Or add a transaction manually using the + button in Transactions.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: Colors.grey.shade500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WelcomeStep extends StatelessWidget {
+  final String number;
+  final String text;
+  const _WelcomeStep({required this.number, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      ],
+    );
   }
 }
 
