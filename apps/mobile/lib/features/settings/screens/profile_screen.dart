@@ -384,6 +384,14 @@ class _LifetimeStatsSection extends ConsumerWidget {
 
     final total = txns.fold(0.0, (s, t) => s + t.amountZAR);
 
+    // Average monthly spend (across distinct months that have data)
+    final distinctMonths = txns
+        .map((t) => '${t.date.year}-${t.date.month}')
+        .toSet();
+    final avgMonthly = distinctMonths.isEmpty
+        ? 0.0
+        : total / distinctMonths.length;
+
     // Tax deductible total this calendar year
     final thisYear = DateTime.now().year;
     final taxTotal = txns
@@ -413,6 +421,14 @@ class _LifetimeStatsSection extends ConsumerWidget {
       topMonthLabel = '${months[dt.month - 1]} ${dt.year}';
     }
 
+    // Most expensive transaction ever
+    final biggest = txns.isEmpty
+        ? null
+        : txns.reduce((a, b) => a.amountZAR >= b.amountZAR ? a : b);
+
+    // Unique vendors
+    final uniqueVendors = txns.map((t) => t.vendor).toSet().length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -434,6 +450,24 @@ class _LifetimeStatsSection extends ConsumerWidget {
           label: 'Total tracked',
           value: CurrencyFormatter.format(total, 'ZAR'),
         ),
+        if (distinctMonths.length >= 2)
+          _StatRow(
+            icon: Icons.trending_flat_outlined,
+            label: 'Avg per month',
+            value: CurrencyFormatter.format(avgMonthly, 'ZAR'),
+          ),
+        if (uniqueVendors > 0)
+          _StatRow(
+            icon: Icons.store_outlined,
+            label: 'Unique vendors',
+            value: '$uniqueVendors',
+          ),
+        if (biggest != null)
+          _StatRow(
+            icon: Icons.arrow_upward_outlined,
+            label: 'Biggest purchase',
+            value: '${biggest.vendor} · ${CurrencyFormatter.format(biggest.amountZAR, 'ZAR')}',
+          ),
         if (topMonthLabel != null)
           _StatRow(
             icon: Icons.calendar_month_outlined,
