@@ -9,10 +9,15 @@ const reportPeriods = [
   'Last 6 Months',
   'This Year',
   'Last Year',
+  'Custom…',
 ];
 
 final reportPeriodProvider =
     StateProvider<String>((ref) => 'This Month');
+
+/// Only used when reportPeriodProvider == 'Custom…'.
+final reportCustomRangeProvider =
+    StateProvider<(DateTime, DateTime)?>((_) => null);
 
 (DateTime, DateTime) reportDateRange(String period) {
   final now = DateTime.now();
@@ -66,8 +71,10 @@ final reportPeriodProvider =
 }
 
 /// Total spend in the previous period (for comparison).
+/// Returns 0 for custom ranges since there is no defined previous period.
 final previousPeriodTotalProvider = Provider<double>((ref) {
   final period = ref.watch(reportPeriodProvider);
+  if (period == 'Custom…') return 0.0;
   final txns = ref.watch(transactionsProvider).asData?.value ?? [];
   final (from, to) = _previousPeriodDateRange(period);
   return txns
@@ -78,7 +85,9 @@ final previousPeriodTotalProvider = Provider<double>((ref) {
 final reportTransactionsProvider = Provider<List<TransactionModel>>((ref) {
   final period = ref.watch(reportPeriodProvider);
   final txns = ref.watch(transactionsProvider).asData?.value ?? [];
-  final (from, to) = reportDateRange(period);
+  final (DateTime from, DateTime to) = period == 'Custom…'
+      ? (ref.watch(reportCustomRangeProvider) ?? reportDateRange('This Month'))
+      : reportDateRange(period);
   return txns
       .where((t) => !t.date.isBefore(from) && !t.date.isAfter(to))
       .toList();

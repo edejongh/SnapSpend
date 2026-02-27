@@ -47,17 +47,23 @@ class ReportsScreen extends ConsumerWidget {
       body: txnsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data: (_) => ListView(
+        data: (_) {
+          // Build a human-readable label for the custom range
+          final customRange = ref.watch(reportCustomRangeProvider);
+          final periodLabel = (period == 'Custom…' && customRange != null)
+              ? '${_fmtDate(customRange.$1)} – ${_fmtDate(customRange.$2)}'
+              : period;
+
+          return ListView(
           padding: const EdgeInsets.all(16),
           children: [
             FilterBar(
               periods: reportPeriods,
               selected: period,
-              onChanged: (p) =>
-                  ref.read(reportPeriodProvider.notifier).state = p,
+              onChanged: (p) => _onPeriodChanged(context, ref, p),
             ),
             const SizedBox(height: 16),
-            _TotalCard(total: total, period: period, previousTotal: previousTotal),
+            _TotalCard(total: total, period: periodLabel, previousTotal: previousTotal),
             if (total > 0) ...[
               const SizedBox(height: 12),
               _PeriodSummaryCard(
@@ -125,9 +131,37 @@ class ReportsScreen extends ConsumerWidget {
               _TaxSummaryCard(total: taxTotal, transactions: taxTxns),
             ],
           ],
-        ),
+        );
+        },
       ),
     );
+  }
+
+  Future<void> _onPeriodChanged(
+      BuildContext context, WidgetRef ref, String p) async {
+    if (p != 'Custom…') {
+      ref.read(reportCustomRangeProvider.notifier).state = null;
+      ref.read(reportPeriodProvider.notifier).state = p;
+      return;
+    }
+    // Show date range picker
+    final existing = ref.read(reportCustomRangeProvider);
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: existing != null
+          ? DateTimeRange(start: existing.$1, end: existing.$2)
+          : null,
+      helpText: 'Select date range',
+      saveText: 'Apply',
+    );
+    if (picked == null) return;
+    ref.read(reportCustomRangeProvider.notifier).state = (
+      picked.start,
+      DateTime(picked.end.year, picked.end.month, picked.end.day, 23, 59, 59),
+    );
+    ref.read(reportPeriodProvider.notifier).state = 'Custom…';
   }
 
   Future<void> _exportCsv(BuildContext context, WidgetRef ref) async {
@@ -178,6 +212,9 @@ class ReportsScreen extends ConsumerWidget {
     final allTxns = ref.read(reportTransactionsProvider);
     showDayTransactionsSheet(context, day, allTxns);
   }
+
+  String _fmtDate(DateTime d) =>
+      '${d.day} ${const ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.month - 1]}';
 }
 
 class _TotalCard extends StatelessWidget {
