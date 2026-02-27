@@ -5,6 +5,7 @@ import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/transaction_list_tile.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
+import '../../transactions/widgets/transaction_detail_sheet.dart';
 
 class RecentTransactionsList extends ConsumerWidget {
   const RecentTransactionsList({super.key});
@@ -53,7 +54,8 @@ class RecentTransactionsList extends ConsumerWidget {
                     return TransactionListTile(
                       transaction: txn,
                       categoryIcon: category?.icon,
-                      onTap: () => context.push('/transactions'),
+                      onTap: () =>
+                          showTransactionDetail(context, txn),
                     );
                   })
                   .toList(),
