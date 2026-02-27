@@ -384,6 +384,12 @@ class _LifetimeStatsSection extends ConsumerWidget {
 
     final total = txns.fold(0.0, (s, t) => s + t.amountZAR);
 
+    // Tax deductible total this calendar year
+    final thisYear = DateTime.now().year;
+    final taxTotal = txns
+        .where((t) => t.isTaxDeductible && t.date.year == thisYear)
+        .fold(0.0, (s, t) => s + t.amountZAR);
+
     // Most active month
     final monthCounts = <String, int>{};
     for (final t in txns) {
@@ -433,6 +439,12 @@ class _LifetimeStatsSection extends ConsumerWidget {
             icon: Icons.calendar_month_outlined,
             label: 'Most active month',
             value: '$topMonthLabel (${topMonth!.value} txns)',
+          ),
+        if (taxTotal > 0)
+          _StatRow(
+            icon: Icons.receipt_long_outlined,
+            label: 'Tax deductible $thisYear',
+            value: CurrencyFormatter.format(taxTotal, 'ZAR'),
           ),
       ],
     );
