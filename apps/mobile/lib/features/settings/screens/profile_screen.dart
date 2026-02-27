@@ -1,12 +1,14 @@
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:snapspend_core/snapspend_core.dart' show CurrencyFormatter;
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/primary_button.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -364,9 +366,106 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+            _LifetimeStatsSection(),
           ],
         );
         },
+      ),
+    );
+  }
+}
+
+class _LifetimeStatsSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+    if (txns.isEmpty) return const SizedBox.shrink();
+
+    final total = txns.fold(0.0, (s, t) => s + t.amountZAR);
+
+    // Most active month
+    final monthCounts = <String, int>{};
+    for (final t in txns) {
+      final key =
+          '${t.date.year}-${t.date.month.toString().padLeft(2, '0')}';
+      monthCounts[key] = (monthCounts[key] ?? 0) + 1;
+    }
+    final topMonth = monthCounts.isEmpty
+        ? null
+        : monthCounts.entries
+            .reduce((a, b) => a.value >= b.value ? a : b);
+
+    String? topMonthLabel;
+    if (topMonth != null) {
+      final parts = topMonth.key.split('-');
+      final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      topMonthLabel = '${months[dt.month - 1]} ${dt.year}';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Your Stats',
+          style: Theme.of(context)
+              .textTheme
+              .titleSmall
+              ?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 12),
+        _StatRow(
+          icon: Icons.receipt_long_outlined,
+          label: 'Total transactions',
+          value: '${txns.length}',
+        ),
+        _StatRow(
+          icon: Icons.attach_money_outlined,
+          label: 'Total tracked',
+          value: CurrencyFormatter.format(total, 'ZAR'),
+        ),
+        if (topMonthLabel != null)
+          _StatRow(
+            icon: Icons.calendar_month_outlined,
+            label: 'Most active month',
+            value: '$topMonthLabel (${topMonth!.value} txns)',
+          ),
+      ],
+    );
+  }
+}
+
+class _StatRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _StatRow(
+      {required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon,
+              size: 18, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }
