@@ -299,6 +299,38 @@ final isRecordMonthProvider = Provider<bool>((ref) {
   return currentTotal > prevMax;
 });
 
+/// The day of the week (1=Mon…7=Sun) with the highest average spend,
+/// computed from the last 90 days. Returns null when insufficient data.
+final peakSpendDayProvider = Provider<String?>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  if (txns.isEmpty) return null;
+  final cutoff = DateTime.now().subtract(const Duration(days: 90));
+  final recent = txns.where((t) => t.date.isAfter(cutoff)).toList();
+  if (recent.length < 10) return null; // need enough data
+  // Accumulate spend per weekday (Mon=1 … Sun=7)
+  final totals = List.filled(8, 0.0); // index 0 unused
+  final counts = List.filled(8, 0);
+  for (final t in recent) {
+    final d = t.date.weekday;
+    totals[d] += t.amountZAR;
+    counts[d]++;
+  }
+  // Find weekday with highest average spend (only consider days with ≥3 txns)
+  int? peakDay;
+  double peakAvg = 0;
+  for (int d = 1; d <= 7; d++) {
+    if (counts[d] < 3) continue;
+    final avg = totals[d] / counts[d];
+    if (avg > peakAvg) {
+      peakAvg = avg;
+      peakDay = d;
+    }
+  }
+  if (peakDay == null) return null;
+  const names = ['', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays', 'Sundays'];
+  return names[peakDay];
+});
+
 /// The recurring vendor with the highest average monthly spend that hasn't
 /// appeared in the current month yet (only shown after day 7).
 /// Returns null if no such vendor exists.

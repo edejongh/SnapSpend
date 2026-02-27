@@ -24,6 +24,7 @@ class SpendingInsightsCard extends ConsumerWidget {
     final avgMonthlyByCategory = ref.watch(avgMonthlyCategorySpendProvider);
     final categories = ref.watch(categoriesProvider);
     final skippedRecurring = ref.watch(skippedRecurringProvider);
+    final peakDay = ref.watch(peakSpendDayProvider);
 
     final insights = <_Insight>[];
 
@@ -164,6 +165,15 @@ class SpendingInsightsCard extends ConsumerWidget {
           break; // show at most one budget-pace insight
         }
       }
+    }
+
+    // Peak spend day of week
+    if (peakDay != null) {
+      insights.add(_Insight(
+        icon: Icons.calendar_today_outlined,
+        color: Colors.indigo.shade600,
+        text: 'You tend to spend the most on $peakDay (last 90 days)',
+      ));
     }
 
     // Skipped recurring expense — positive reinforcement
