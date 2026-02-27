@@ -50,6 +50,10 @@ final _txnDateRangeProvider =
 final _txnAmountRangeProvider =
     StateProvider.autoDispose<(double?, double?)>((ref) => (null, null));
 
+// Show only tax-deductible transactions when true
+final _txnTaxFilterProvider =
+    StateProvider.autoDispose<bool>((ref) => false);
+
 class TransactionsScreen extends ConsumerWidget {
   final String? initialCategory;
   const TransactionsScreen({super.key, this.initialCategory});
@@ -63,6 +67,7 @@ class TransactionsScreen extends ConsumerWidget {
     final sort = ref.watch(_txnSortProvider);
     final dateRange = ref.watch(_txnDateRangeProvider);
     final amountRange = ref.watch(_txnAmountRangeProvider);
+    final taxOnly = ref.watch(_txnTaxFilterProvider);
 
     // Apply deep-link category on first build (provider is null on fresh open)
     if (initialCategory != null && categoryFilter == null) {
@@ -75,6 +80,18 @@ class TransactionsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Transactions'),
         actions: [
+          IconButton(
+            icon: Icon(
+              Icons.verified_outlined,
+              color: taxOnly
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
+            ),
+            tooltip: taxOnly ? 'Showing tax deductible only' : 'Tax deductible only',
+            onPressed: () => ref
+                .read(_txnTaxFilterProvider.notifier)
+                .state = !taxOnly,
+          ),
           IconButton(
             icon: Stack(
               clipBehavior: Clip.none,
@@ -275,6 +292,10 @@ class TransactionsScreen extends ConsumerWidget {
                 .toList();
           }
 
+          if (taxOnly) {
+            txns = txns.where((t) => t.isTaxDeductible).toList();
+          }
+
           if (amountRange.$1 != null || amountRange.$2 != null) {
             txns = txns.where((t) {
               if (amountRange.$1 != null && t.amountZAR < amountRange.$1!)
@@ -333,7 +354,8 @@ class TransactionsScreen extends ConsumerWidget {
               categoryFilter != null ||
               dateRange != _TxnDateRange.all ||
               amountRange.$1 != null ||
-              amountRange.$2 != null;
+              amountRange.$2 != null ||
+              taxOnly;
 
           // Group by date
           final groups = <String, List<TransactionModel>>{};
@@ -447,6 +469,7 @@ class TransactionsScreen extends ConsumerWidget {
     final dateRange = ref.read(_txnDateRangeProvider);
     final query = ref.read(_txnSearchProvider).toLowerCase();
     final amountRange = ref.read(_txnAmountRangeProvider);
+    final taxOnly = ref.read(_txnTaxFilterProvider);
 
     var txns = categoryFilter == null
         ? allTxns
@@ -477,6 +500,10 @@ class TransactionsScreen extends ConsumerWidget {
           .where((t) =>
               !t.date.isBefore(from) && (to == null || t.date.isBefore(to)))
           .toList();
+    }
+
+    if (taxOnly) {
+      txns = txns.where((t) => t.isTaxDeductible).toList();
     }
 
     if (amountRange.$1 != null || amountRange.$2 != null) {
