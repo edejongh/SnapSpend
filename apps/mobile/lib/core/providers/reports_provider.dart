@@ -8,6 +8,7 @@ const reportPeriods = [
   'Last 3 Months',
   'Last 6 Months',
   'This Year',
+  'Last Year',
 ];
 
 final reportPeriodProvider =
@@ -27,6 +28,9 @@ final reportPeriodProvider =
       return (DateTime(now.year, now.month - 5, 1), end);
     case 'This Year':
       return (DateTime(now.year, 1, 1), end);
+    case 'Last Year':
+      return (DateTime(now.year - 1, 1, 1),
+          DateTime(now.year - 1, 12, 31, 23, 59, 59));
     default: // This Month
       return (DateTime(now.year, now.month, 1), end);
   }
@@ -47,8 +51,13 @@ final reportPeriodProvider =
       return (DateTime(now.year, now.month - 11, 1),
           DateTime(now.year, now.month - 6, 0, 23, 59, 59));
     case 'This Year':
+      // Compare to same YTD period last year for a fair comparison
       return (DateTime(now.year - 1, 1, 1),
-          DateTime(now.year - 1, 12, 31, 23, 59, 59));
+          DateTime(now.year - 1, now.month, now.day, 23, 59, 59));
+    case 'Last Year':
+      // Compare to the year before
+      return (DateTime(now.year - 2, 1, 1),
+          DateTime(now.year - 2, 12, 31, 23, 59, 59));
     default: // This Month → compare to last month
       final lastMonth = DateTime(now.year, now.month - 1);
       final lastMonthEnd = DateTime(now.year, now.month, 0, 23, 59, 59);
@@ -101,13 +110,18 @@ final reportSpendByMonthProvider = Provider<Map<String, double>>((ref) {
     'Last 3 Months' => 3,
     'Last 6 Months' => 6,
     'This Year' => now.month,
+    'Last Year' => 12,
     _ => 1,
   };
+
+  final isLastYear = period == 'Last Year';
+  final baseYear = isLastYear ? now.year - 1 : now.year;
+  final baseMonth = isLastYear ? 12 : now.month;
 
   // Build ordered map with every month initialised to 0
   final map = <String, double>{};
   for (int i = numMonths - 1; i >= 0; i--) {
-    final m = DateTime(now.year, now.month - i);
+    final m = DateTime(baseYear, baseMonth - i);
     map[_monthLabel(m)] = 0.0;
   }
 
