@@ -263,6 +263,13 @@ final spendingStreakProvider = Provider<int>((ref) {
   return streak;
 });
 
+/// All distinct vendor names, sorted alphabetically. Used for autocomplete.
+final allVendorNamesProvider = Provider<List<String>>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  final names = txns.map((t) => t.vendor).toSet().toList()..sort();
+  return names;
+});
+
 /// Most-used category for a given vendor name (case-insensitive match).
 /// Returns null if no prior transactions exist for that vendor.
 final vendorCategoryProvider =

@@ -277,6 +277,13 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
               decoration: const InputDecoration(labelText: 'Vendor'),
               validator: (v) => Validators.required(v, fieldName: 'Vendor'),
             ),
+            _VendorSuggestions(
+              vendor: _vendorText,
+              onSelect: (name) {
+                _vendorCtrl.text = name;
+                setState(() => _vendorText = name);
+              },
+            ),
             _VendorCategorySuggestion(
               vendor: _vendorText,
               currentCategory: _selectedCategory,
@@ -349,6 +356,48 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
     );
   }
 
+}
+
+// ── Vendor name autocomplete suggestions ──────────────────────────────────────
+
+class _VendorSuggestions extends ConsumerWidget {
+  final String vendor;
+  final void Function(String name) onSelect;
+
+  const _VendorSuggestions({required this.vendor, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final query = vendor.trim();
+    if (query.isEmpty) return const SizedBox.shrink();
+
+    final allNames = ref.watch(allVendorNamesProvider);
+    final lower = query.toLowerCase();
+    final matches = allNames
+        .where((n) => n.toLowerCase().contains(lower) && n != query)
+        .take(5)
+        .toList();
+
+    if (matches.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 4),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final name in matches)
+            ActionChip(
+              label: Text(name,
+                  style: const TextStyle(fontSize: 12)),
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              onPressed: () => onSelect(name),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Vendor category suggestion ────────────────────────────────────────────────

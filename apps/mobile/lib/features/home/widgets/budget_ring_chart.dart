@@ -102,7 +102,7 @@ class _BudgetProgressRow extends ConsumerWidget {
       borderRadius: BorderRadius.circular(8),
       onTap: budget.categoryId != null
           ? () => context.go('/transactions', extra: budget.categoryId)
-          : null,
+          : () => context.go('/transactions?range=this_month'),
       child: Padding(
         padding: const EdgeInsets.only(bottom: 14),
         child: Column(
