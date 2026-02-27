@@ -6,7 +6,9 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/hive_provider.dart';
+import '../../../core/providers/sync_provider.dart';
 import '../../../core/providers/theme_provider.dart';
+import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -87,6 +89,8 @@ class SettingsScreen extends ConsumerWidget {
                 ? null
                 : () => _showCurrencyPicker(context, ref, userModel),
           ),
+          const Divider(),
+          _SyncTile(),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout),
@@ -265,5 +269,55 @@ class SettingsScreen extends ConsumerWidget {
         .read(firebaseServiceProvider)
         .saveUser(userModel.copyWith(defaultCurrency: selected));
     ref.invalidate(currentUserProvider);
+  }
+}
+
+class _SyncTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final syncStatus =
+        ref.watch(syncStatusProvider).asData?.value ?? SyncStatus.idle;
+    final uid = ref.watch(authStateProvider).asData?.value?.uid;
+    final isSyncing = syncStatus == SyncStatus.syncing;
+
+    String subtitle;
+    switch (syncStatus) {
+      case SyncStatus.syncing:
+        subtitle = 'Syncing…';
+      case SyncStatus.error:
+        subtitle = 'Last sync failed — tap to retry';
+      case SyncStatus.idle:
+      default:
+        subtitle = 'All changes saved';
+    }
+
+    return ListTile(
+      leading: isSyncing
+          ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(
+              syncStatus == SyncStatus.error
+                  ? Icons.sync_problem_outlined
+                  : Icons.cloud_done_outlined,
+              color: syncStatus == SyncStatus.error ? Colors.red : null,
+            ),
+      title: const Text('Sync'),
+      subtitle: Text(subtitle),
+      onTap: isSyncing || uid == null
+          ? null
+          : () async {
+              final sync = ref.read(syncServiceProvider);
+              await sync.syncPendingTransactions(uid);
+              ref.invalidate(transactionsProvider);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Sync complete')),
+                );
+              }
+            },
+    );
   }
 }
