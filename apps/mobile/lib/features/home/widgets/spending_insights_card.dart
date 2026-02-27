@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snapspend_core/snapspend_core.dart';
+import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 
 class SpendingInsightsCard extends ConsumerWidget {
@@ -15,6 +16,9 @@ class SpendingInsightsCard extends ConsumerWidget {
     final projectedMonthly = ref.watch(projectedMonthlySpendProvider);
     final avgDaily = ref.watch(avgDailySpendProvider);
     final todaySpend = ref.watch(todaySpendProvider);
+    final spendByCategory = ref.watch(spendByCategoryProvider);
+    final avgMonthlyByCategory = ref.watch(avgMonthlyCategorySpendProvider);
+    final categories = ref.watch(categoriesProvider);
 
     final insights = <_Insight>[];
 
@@ -77,6 +81,37 @@ class SpendingInsightsCard extends ConsumerWidget {
         text:
             'Biggest expense: ${largest.vendor} — ${CurrencyFormatter.format(largest.amountZAR, 'ZAR')}',
       ));
+    }
+
+    // Category spike vs 3-month average
+    {
+      String? spikeCategory;
+      double spikePct = 0;
+      for (final entry in spendByCategory.entries) {
+        final avg = avgMonthlyByCategory[entry.key];
+        if (avg == null || avg < 50) continue; // ignore tiny categories
+        final diff = entry.value - avg;
+        if (diff < 100) continue; // needs meaningful absolute difference
+        final pct = diff / avg * 100;
+        if (pct >= 30 && pct > spikePct) {
+          spikePct = pct;
+          spikeCategory = entry.key;
+        }
+      }
+      if (spikeCategory != null) {
+        final catName = categories
+                .cast<CategoryModel?>()
+                .firstWhere((c) => c?.categoryId == spikeCategory,
+                    orElse: () => null)
+                ?.name ??
+            spikeCategory!;
+        insights.add(_Insight(
+          icon: Icons.category_outlined,
+          color: Colors.deepOrange.shade600,
+          text:
+              '$catName spending is ${spikePct.round()}% above your 3-month average',
+        ));
+      }
     }
 
     if (insights.isEmpty) return const SizedBox.shrink();
