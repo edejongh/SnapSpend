@@ -19,13 +19,42 @@ class TransactionListTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          child: Text(
-            categoryIcon ?? _categoryEmoji(transaction.category),
-            style: const TextStyle(fontSize: 18),
-          ),
-        ),
+        leading: transaction.receiptStoragePath != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                transaction.receiptStoragePath!,
+                width: 44,
+                height: 44,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => CircleAvatar(
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primaryContainer,
+                  child: Text(
+                    categoryIcon ?? _categoryEmoji(transaction.category),
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ),
+                loadingBuilder: (_, child, progress) => progress == null
+                    ? child
+                    : CircleAvatar(
+                        backgroundColor:
+                            Theme.of(context).colorScheme.primaryContainer,
+                        child: Text(
+                          categoryIcon ??
+                              _categoryEmoji(transaction.category),
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                      ),
+              ),
+            )
+          : CircleAvatar(
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              child: Text(
+                categoryIcon ?? _categoryEmoji(transaction.category),
+                style: const TextStyle(fontSize: 18),
+              ),
+            ),
         title: Text(
           transaction.vendor,
           style: const TextStyle(fontWeight: FontWeight.w600),

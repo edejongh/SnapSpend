@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
@@ -672,6 +673,7 @@ class TransactionsScreen extends ConsumerWidget {
                             _confirmDelete(context, ref, txn),
                         onTap: () => _showDetail(context, ref, txn),
                         onLongPress: () {
+                          HapticFeedback.selectionClick();
                           ref
                               .read(_selectionModeProvider.notifier)
                               .state = true;

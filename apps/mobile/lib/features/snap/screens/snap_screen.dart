@@ -1,5 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -111,6 +112,7 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
     if (controller == null || !controller.value.isInitialized) return;
     if (_isProcessing) return;
     if (!_checkScansAvailable()) return;
+    HapticFeedback.mediumImpact();
     try {
       final file = await controller.takePicture();
       await _processImage(file.path);

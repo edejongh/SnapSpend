@@ -131,6 +131,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    HapticFeedback.mediumImpact();
     setState(() => _isSaving = true);
 
     final amount = double.tryParse(_amountCtrl.text) ?? 0;
