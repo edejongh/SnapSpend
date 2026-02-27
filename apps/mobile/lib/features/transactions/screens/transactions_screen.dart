@@ -1042,6 +1042,15 @@ class _TransactionDetailSheet extends ConsumerWidget {
     final category = ref.watch(categoryByIdProvider(transaction.category));
     final t = transaction;
 
+    // Vendor history (all other transactions with same vendor)
+    final allTxns = ref.watch(transactionsProvider).asData?.value ?? [];
+    final vendorTxns = allTxns
+        .where((tx) => tx.vendor == t.vendor && tx.txnId != t.txnId)
+        .toList();
+    final vendorTotal = vendorTxns.fold(0.0, (s, tx) => s + tx.amountZAR);
+    final vendorAvg =
+        vendorTxns.isEmpty ? null : vendorTotal / vendorTxns.length;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
       maxChildSize: 0.9,
@@ -1190,6 +1199,32 @@ class _TransactionDetailSheet extends ConsumerWidget {
               label: 'Tax deductible', value: t.isTaxDeductible ? 'Yes' : 'No'),
           if (t.note != null && t.note!.isNotEmpty)
             _DetailRow(label: 'Note', value: t.note!),
+          if (vendorTxns.isNotEmpty) ...[
+            const Divider(height: 28),
+            Text(
+              '${t.vendor} history',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            _DetailRow(
+                label: 'Visits',
+                value:
+                    '${vendorTxns.length + 1} total (${vendorTxns.length} other)'),
+            _DetailRow(
+                label: 'Total spent',
+                value: CurrencyFormatter.format(
+                    vendorTotal + t.amountZAR, 'ZAR')),
+            if (vendorAvg != null)
+              _DetailRow(
+                  label: 'Avg per visit',
+                  value: CurrencyFormatter.format(
+                      (vendorTotal + t.amountZAR) / (vendorTxns.length + 1),
+                      'ZAR')),
+          ],
           if (t.flaggedForReview)
             Container(
               margin: const EdgeInsets.only(top: 12),
