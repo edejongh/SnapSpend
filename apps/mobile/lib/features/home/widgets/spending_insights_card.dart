@@ -23,6 +23,7 @@ class SpendingInsightsCard extends ConsumerWidget {
     final spendByCategory = ref.watch(spendByCategoryProvider);
     final avgMonthlyByCategory = ref.watch(avgMonthlyCategorySpendProvider);
     final categories = ref.watch(categoriesProvider);
+    final skippedRecurring = ref.watch(skippedRecurringProvider);
 
     final insights = <_Insight>[];
 
@@ -163,6 +164,20 @@ class SpendingInsightsCard extends ConsumerWidget {
           break; // show at most one budget-pace insight
         }
       }
+    }
+
+    // Skipped recurring expense — positive reinforcement
+    if (skippedRecurring != null) {
+      insights.add(_Insight(
+        icon: Icons.savings_outlined,
+        color: Colors.green.shade700,
+        text:
+            'No ${skippedRecurring.vendor} spend yet this month — usually '
+            '${CurrencyFormatter.format(skippedRecurring.avgMonthlyAmount, 'ZAR')}/mo',
+        onTap: () => context.go(
+          '/transactions?search=${Uri.encodeComponent(skippedRecurring.vendor)}',
+        ),
+      ));
     }
 
     // Nudge to set up a budget if none exist but there are transactions

@@ -299,6 +299,25 @@ final isRecordMonthProvider = Provider<bool>((ref) {
   return currentTotal > prevMax;
 });
 
+/// The recurring vendor with the highest average monthly spend that hasn't
+/// appeared in the current month yet (only shown after day 7).
+/// Returns null if no such vendor exists.
+final skippedRecurringProvider = Provider<RecurringVendor?>((ref) {
+  final recurring = ref.watch(recurringTransactionsProvider);
+  if (recurring.isEmpty) return null;
+  final now = DateTime.now();
+  if (now.day <= 7) return null; // too early to call it a skip
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  final thisMonthVendors = txns
+      .where((t) => t.date.year == now.year && t.date.month == now.month)
+      .map((t) => t.vendor)
+      .toSet();
+  final skipped = recurring
+      .where((r) => !thisMonthVendors.contains(r.vendor))
+      .toList();
+  return skipped.isEmpty ? null : skipped.first; // already sorted by avg desc
+});
+
 /// All distinct vendor names, sorted alphabetically. Used for autocomplete.
 final allVendorNamesProvider = Provider<List<String>>((ref) {
   final txns = ref.watch(transactionsProvider).asData?.value ?? [];
