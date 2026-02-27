@@ -136,29 +136,36 @@ class MonthlySummaryCard extends ConsumerWidget {
               const SizedBox(height: 10),
               const Divider(height: 1),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  Text(
-                    topCategory?.icon ?? '📋',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Top: ${topCategory?.name ?? topEntry.key}',
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => context.go('/transactions', extra: topEntry.key),
+                child: Row(
+                  children: [
+                    Text(
+                      topCategory?.icon ?? '📋',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Top: ${topCategory?.name ?? topEntry.key}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey.shade700,
+                            ),
+                      ),
+                    ),
+                    Text(
+                      CurrencyFormatter.format(topEntry.value, 'ZAR'),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
                             color: Colors.grey.shade700,
                           ),
                     ),
-                  ),
-                  Text(
-                    CurrencyFormatter.format(topEntry.value, 'ZAR'),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
-                  ),
-                ],
+                    const SizedBox(width: 4),
+                    Icon(Icons.chevron_right,
+                        size: 14, color: Colors.grey.shade400),
+                  ],
+                ),
               ),
             ],
           ],

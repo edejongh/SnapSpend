@@ -376,6 +376,7 @@ class _QuickStatsRow extends ConsumerWidget {
     final avgDaily = ref.watch(avgDailySpendProvider);
     final todaySpend = ref.watch(todaySpendProvider);
     final streak = ref.watch(spendingStreakProvider);
+    final dailyAllowance = ref.watch(dailyBudgetAllowanceProvider);
 
     return Column(
       children: [
@@ -421,6 +422,17 @@ class _QuickStatsRow extends ConsumerWidget {
                   icon: Icons.local_fire_department_outlined,
                   label: 'Streak',
                   value: '$streak day${streak == 1 ? '' : 's'} 🔥',
+                ),
+              ),
+            ] else if (dailyAllowance != null) ...[
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StatChip(
+                  icon: Icons.savings_outlined,
+                  label: 'Daily budget',
+                  value: dailyAllowance <= 0
+                      ? 'Over budget'
+                      : CurrencyFormatter.format(dailyAllowance, 'ZAR'),
                 ),
               ),
             ],

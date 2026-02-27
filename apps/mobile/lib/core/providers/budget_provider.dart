@@ -134,6 +134,26 @@ class BudgetNotifier extends AsyncNotifier<void> {
 final budgetNotifierProvider =
     AsyncNotifierProvider<BudgetNotifier, void>(BudgetNotifier.new);
 
+/// Remaining daily spending allowance based on the overall budget.
+/// = (limit − spent so far) / days remaining in month (inclusive).
+/// Returns null if no overall budget exists, 0 if budget is already exceeded.
+final dailyBudgetAllowanceProvider = Provider<double?>((ref) {
+  final budgets = ref.watch(budgetsProvider).asData?.value ?? [];
+  final overallBudgets =
+      budgets.where((b) => b.categoryId == null).toList();
+  if (overallBudgets.isEmpty) return null;
+  final limit = overallBudgets.first.limitAmount;
+  if (limit <= 0) return null;
+  final monthlySpend = ref.watch(monthlySpendProvider);
+  final remaining = limit - monthlySpend;
+  if (remaining <= 0) return 0.0;
+  final now = DateTime.now();
+  final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+  final daysLeft = daysInMonth - now.day + 1; // inclusive of today
+  if (daysLeft <= 0) return 0.0;
+  return remaining / daysLeft;
+});
+
 /// Budgets that have reached or exceeded their alertAt threshold.
 /// Each record is (budget, current utilisation fraction).
 final budgetAlertsProvider = Provider<List<(BudgetModel, double)>>((ref) {
