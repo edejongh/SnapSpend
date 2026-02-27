@@ -263,6 +263,22 @@ final spendingStreakProvider = Provider<int>((ref) {
   return streak;
 });
 
+/// Most-used category for a given vendor name (case-insensitive match).
+/// Returns null if no prior transactions exist for that vendor.
+final vendorCategoryProvider =
+    Provider.family<String?, String>((ref, vendor) {
+  if (vendor.trim().isEmpty) return null;
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  final lower = vendor.trim().toLowerCase();
+  final matches = txns.where((t) => t.vendor.toLowerCase() == lower);
+  if (matches.isEmpty) return null;
+  final counts = <String, int>{};
+  for (final t in matches) {
+    counts[t.category] = (counts[t.category] ?? 0) + 1;
+  }
+  return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+});
+
 // Transaction CRUD notifier
 class TransactionNotifier extends AsyncNotifier<void> {
   @override

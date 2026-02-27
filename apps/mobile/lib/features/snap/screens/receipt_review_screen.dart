@@ -42,6 +42,12 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
   bool _fetchingRate = false;
   bool _isSaving = false;
 
+  /// The current vendor text, kept in sync with _vendorCtrl so we can
+  /// watch vendorCategoryProvider reactively.
+  String _vendorText = '';
+  /// Whether the category was manually set by the user (suppresses suggestions).
+  bool _categoryManuallySet = false;
+
   bool get _isEditing => widget.existingTransaction != null;
 
   @override
@@ -83,6 +89,12 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
       _selectedDate = ocr?.extractedDate ?? DateTime.now();
       _isTaxDeductible = false;
     }
+    _vendorText = _vendorCtrl.text;
+    _vendorCtrl.addListener(() {
+      if (mounted && _vendorCtrl.text != _vendorText) {
+        setState(() => _vendorText = _vendorCtrl.text);
+      }
+    });
   }
 
   @override
@@ -255,6 +267,16 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
               decoration: const InputDecoration(labelText: 'Vendor'),
               validator: (v) => Validators.required(v, fieldName: 'Vendor'),
             ),
+            _VendorCategorySuggestion(
+              vendor: _vendorText,
+              currentCategory: _selectedCategory,
+              categoryManuallySet: _categoryManuallySet,
+              onAccept: (catId) =>
+                  setState(() {
+                    _selectedCategory = catId;
+                    _categoryManuallySet = true;
+                  }),
+            ),
             const SizedBox(height: 12),
             // Date picker
             ListTile(
@@ -284,7 +306,10 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                     ),
                   )
                   .toList(),
-              onChanged: (v) => setState(() => _selectedCategory = v),
+              onChanged: (v) => setState(() {
+                _selectedCategory = v;
+                _categoryManuallySet = true;
+              }),
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -314,6 +339,69 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
     );
   }
 
+}
+
+// ── Vendor category suggestion ────────────────────────────────────────────────
+
+class _VendorCategorySuggestion extends ConsumerWidget {
+  final String vendor;
+  final String? currentCategory;
+  final bool categoryManuallySet;
+  final void Function(String catId) onAccept;
+
+  const _VendorCategorySuggestion({
+    required this.vendor,
+    required this.currentCategory,
+    required this.categoryManuallySet,
+    required this.onAccept,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Only suggest when not already manually set
+    if (categoryManuallySet) return const SizedBox.shrink();
+    final suggestedCatId =
+        ref.watch(vendorCategoryProvider(vendor.trim()));
+    if (suggestedCatId == null) return const SizedBox.shrink();
+    // Don't suggest if it's already the selected category
+    if (suggestedCatId == currentCategory) return const SizedBox.shrink();
+    final category = ref.watch(categoryByIdProvider(suggestedCatId));
+    if (category == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 4),
+      child: Row(
+        children: [
+          Icon(Icons.history, size: 13, color: Colors.grey.shade500),
+          const SizedBox(width: 4),
+          Text(
+            'Usually: ',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+          GestureDetector(
+            onTap: () => onAccept(suggestedCatId),
+            child: Text(
+              '${category.icon} ${category.name}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+                decorationColor: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ),
+          Text(
+            ' — tap to use',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+extension on _ReceiptReviewScreenState {
   Widget _buildZarHint() {
     if (_fetchingRate) {
       return const Row(
