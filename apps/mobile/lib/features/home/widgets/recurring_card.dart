@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
@@ -78,44 +79,52 @@ class _RecurringRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cat = ref.watch(categoryByIdProvider(vendor.category));
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor:
-                Theme.of(context).colorScheme.primaryContainer,
-            child: Text(
-              cat?.icon ?? '📋',
-              style: const TextStyle(fontSize: 14),
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => context.go(
+        '/transactions?search=${Uri.encodeComponent(vendor.vendor)}',
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor:
+                  Theme.of(context).colorScheme.primaryContainer,
+              child: Text(
+                cat?.icon ?? '📋',
+                style: const TextStyle(fontSize: 14),
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  vendor.vendor,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  '${vendor.monthCount} months',
-                  style: TextStyle(
-                      fontSize: 11, color: Colors.grey.shade500),
-                ),
-              ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    vendor.vendor,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    '${vendor.monthCount} months',
+                    style: TextStyle(
+                        fontSize: 11, color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Text(
-            '${CurrencyFormatter.format(vendor.avgMonthlyAmount, 'ZAR')}/mo',
-            style: const TextStyle(
-                fontWeight: FontWeight.w600, fontSize: 13),
-          ),
-        ],
+            Text(
+              '${CurrencyFormatter.format(vendor.avgMonthlyAmount, 'ZAR')}/mo',
+              style: const TextStyle(
+                  fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right, size: 16, color: Colors.grey.shade400),
+          ],
+        ),
       ),
     );
   }

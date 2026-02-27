@@ -190,27 +190,42 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          child: Center(
-            child: GestureDetector(
-              onTap: _isProcessing ? null : _captureFromCamera,
-              child: Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
-                  color: Colors.white.withOpacity(0.15),
-                ),
-                child: Icon(
-                  Icons.camera,
-                  color: _controller?.value.isInitialized == true
-                      ? Colors.white
-                      : Colors.white38,
-                  size: 36,
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: GestureDetector(
+                  onTap: _isProcessing ? null : _captureFromCamera,
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                      color: Colors.white.withOpacity(0.15),
+                    ),
+                    child: Icon(
+                      Icons.camera,
+                      color: _controller?.value.isInitialized == true
+                          ? Colors.white
+                          : Colors.white38,
+                      size: 36,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: _isProcessing
+                    ? null
+                    : () => context.push('/snap/review'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white70,
+                ),
+                child: const Text('Enter manually'),
+              ),
+            ],
           ),
         ),
       ),
