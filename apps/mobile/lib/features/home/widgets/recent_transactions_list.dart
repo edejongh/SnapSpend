@@ -45,8 +45,10 @@ class RecentTransactionsList extends ConsumerWidget {
                 subtitle: 'Tap the camera button to scan your first receipt',
               );
             }
+            final sorted = txns.toList()
+              ..sort((a, b) => b.date.compareTo(a.date));
             return Column(
-              children: txns
+              children: sorted
                   .take(5)
                   .map((txn) {
                     final category =

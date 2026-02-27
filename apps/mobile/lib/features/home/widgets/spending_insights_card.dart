@@ -12,6 +12,7 @@ class SpendingInsightsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final budgets = ref.watch(budgetsProvider).asData?.value ?? [];
+    final isRecordMonth = ref.watch(isRecordMonthProvider);
     final topMerchant = ref.watch(topMerchantThisMonthProvider);
     final largest = ref.watch(largestTransactionThisMonthProvider);
     final monthlySpend = ref.watch(monthlySpendProvider);
@@ -38,6 +39,15 @@ class SpendingInsightsCard extends ConsumerWidget {
               : 'Today\'s spend is ${pct}% below your daily average — nice!',
         ));
       }
+    }
+
+    // Record high month
+    if (isRecordMonth) {
+      insights.add(_Insight(
+        icon: Icons.emoji_events_outlined,
+        color: Colors.purple.shade600,
+        text: 'This is your highest spending month on record — heads up!',
+      ));
     }
 
     // Month-over-month trend

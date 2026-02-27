@@ -37,7 +37,9 @@ class _AlertTile extends StatelessWidget {
     final pctText = '${(utilisation * 100).toStringAsFixed(0)}%';
 
     return GestureDetector(
-      onTap: () => context.push('/settings/budget'),
+      onTap: () => budget.categoryId != null
+          ? context.go('/transactions', extra: budget.categoryId)
+          : context.go('/transactions?range=this_month'),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

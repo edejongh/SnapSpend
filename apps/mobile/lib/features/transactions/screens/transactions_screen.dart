@@ -169,12 +169,32 @@ class TransactionsScreen extends ConsumerWidget {
         ),
       );
       if (confirmed != true) return;
+      final deleted = allTxns.where((t) => ids.contains(t.txnId)).toList();
       for (final id in ids) {
         await ref
             .read(transactionNotifierProvider.notifier)
             .deleteTransaction(id);
       }
       exitSelection();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Deleted ${ids.length} transaction${ids.length == 1 ? '' : 's'}'),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () async {
+                for (final txn in deleted) {
+                  await ref
+                      .read(transactionNotifierProvider.notifier)
+                      .addTransaction(txn);
+                }
+              },
+            ),
+          ),
+        );
+      }
     }
 
     return AppScaffold(
@@ -702,6 +722,20 @@ class TransactionsScreen extends ConsumerWidget {
       await ref
           .read(transactionNotifierProvider.notifier)
           .deleteTransaction(txn.txnId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deleted "${txn.vendor}"'),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () => ref
+                  .read(transactionNotifierProvider.notifier)
+                  .addTransaction(txn),
+            ),
+          ),
+        );
+      }
     }
   }
 

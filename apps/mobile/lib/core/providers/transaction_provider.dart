@@ -276,6 +276,29 @@ final spendingStreakProvider = Provider<int>((ref) {
   return streak;
 });
 
+/// Whether the current month is the highest spending month ever recorded.
+/// Returns false if there is only one month of data (no comparison possible).
+final isRecordMonthProvider = Provider<bool>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  if (txns.isEmpty) return false;
+  final now = DateTime.now();
+  final monthTotals = <String, double>{};
+  for (final t in txns) {
+    final key = '${t.date.year}-${t.date.month.toString().padLeft(2, '0')}';
+    monthTotals[key] = (monthTotals[key] ?? 0.0) + t.amountZAR;
+  }
+  final currentKey =
+      '${now.year}-${now.month.toString().padLeft(2, '0')}';
+  final currentTotal = monthTotals[currentKey] ?? 0.0;
+  if (currentTotal == 0) return false;
+  final otherMonths =
+      monthTotals.entries.where((e) => e.key != currentKey);
+  if (otherMonths.isEmpty) return false;
+  final prevMax = otherMonths.map((e) => e.value).reduce(
+      (a, b) => a > b ? a : b);
+  return currentTotal > prevMax;
+});
+
 /// All distinct vendor names, sorted alphabetically. Used for autocomplete.
 final allVendorNamesProvider = Provider<List<String>>((ref) {
   final txns = ref.watch(transactionsProvider).asData?.value ?? [];
