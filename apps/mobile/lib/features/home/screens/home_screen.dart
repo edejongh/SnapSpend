@@ -60,6 +60,7 @@ class HomeScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const BudgetAlertBanner(),
+              const _FreshMonthBanner(),
               const _FlaggedReceiptsBanner(),
               if (!hasAnyTransactions && allTxns != null)
                 const _WelcomeCard()
@@ -319,6 +320,66 @@ class _AlertsSheet extends StatelessWidget {
               _AlertRow(budget: budget, utilisation: pct),
               const SizedBox(height: 8),
             ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Fresh-month recap banner ─────────────────────────────────────────────────
+
+class _FreshMonthBanner extends ConsumerWidget {
+  const _FreshMonthBanner();
+
+  static const _months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    if (now.day > 2) return const SizedBox.shrink();
+    final lastMonthSpend = ref.watch(lastMonthSpendProvider);
+    if (lastMonthSpend <= 0) return const SizedBox.shrink();
+
+    final lastMonth = DateTime(now.year, now.month - 1);
+    final monthName = _months[lastMonth.month - 1];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.purple.shade50,
+        border: Border.all(color: Colors.purple.shade200),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Text('🎉', style: TextStyle(fontSize: 18)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'New month!',
+                  style: TextStyle(
+                    color: Colors.purple.shade800,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  'You spent ${CurrencyFormatter.format(lastMonthSpend, 'ZAR')} in $monthName',
+                  style: TextStyle(
+                    color: Colors.purple.shade700,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

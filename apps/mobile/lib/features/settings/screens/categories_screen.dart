@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/providers/category_provider.dart';
+import '../../../core/providers/transaction_provider.dart';
 
 // Predefined colour palette for custom categories
 const _palette = [
@@ -17,6 +18,7 @@ class CategoriesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userCatsAsync = ref.watch(userCategoriesProvider);
+    final spendByCategory = ref.watch(spendByCategoryProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Categories')),
@@ -37,6 +39,7 @@ class CategoriesScreen extends ConsumerWidget {
                 isDefault: true,
                 onEdit: null,
                 onDelete: null,
+                spend: spendByCategory[cat.categoryId],
               ),
             const Divider(),
             _SectionHeader(label: 'My categories'),
@@ -57,6 +60,7 @@ class CategoriesScreen extends ConsumerWidget {
                   isDefault: false,
                   onEdit: () => _showCategorySheet(context, ref, cat),
                   onDelete: () => _confirmDelete(context, ref, cat),
+                  spend: spendByCategory[cat.categoryId],
                 ),
             // Bottom padding for FAB
             const SizedBox(height: 80),
@@ -138,26 +142,52 @@ class _CategoryTile extends StatelessWidget {
   final bool isDefault;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final double? spend;
 
   const _CategoryTile({
     required this.category,
     required this.isDefault,
     required this.onEdit,
     required this.onDelete,
+    this.spend,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasSpend = spend != null && spend! > 0;
+    final hasTax = category.taxDeductibleByDefault;
+
+    Widget? subtitle;
+    if (hasSpend || hasTax) {
+      subtitle = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (hasTax)
+            const Text(
+              'Tax deductible by default',
+              style: TextStyle(fontSize: 12, color: Colors.green),
+            ),
+          if (hasSpend)
+            Text(
+              '${CurrencyFormatter.format(spend!, 'ZAR')} this month',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade700,
+              ),
+            ),
+        ],
+      );
+    }
+
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: _hexColor(category.color),
         child: Text(category.icon, style: const TextStyle(fontSize: 18)),
       ),
       title: Text(category.name),
-      subtitle: category.taxDeductibleByDefault
-          ? const Text('Tax deductible by default',
-              style: TextStyle(fontSize: 12, color: Colors.green))
-          : null,
+      subtitle: subtitle,
       trailing: isDefault
           ? const Icon(Icons.lock_outline, size: 16, color: Colors.grey)
           : Row(
