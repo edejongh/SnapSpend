@@ -17,6 +17,111 @@ void showTransactionDetail(
   );
 }
 
+/// Shows a bottom sheet listing all transactions for [day].
+/// Each row is tappable to open the full [TransactionDetailSheet].
+void showDayTransactionsSheet(
+    BuildContext context, DateTime day, List<TransactionModel> allTxns) {
+  final dayTxns = allTxns
+      .where((t) =>
+          t.date.year == day.year &&
+          t.date.month == day.month &&
+          t.date.day == day.day)
+      .toList()
+    ..sort((a, b) => b.date.compareTo(a.date));
+  if (dayTxns.isEmpty) return;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (_) => _DayTransactionsSheet(day: day, transactions: dayTxns),
+  );
+}
+
+class _DayTransactionsSheet extends ConsumerWidget {
+  final DateTime day;
+  final List<TransactionModel> transactions;
+  const _DayTransactionsSheet(
+      {required this.day, required this.transactions});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final total =
+        transactions.fold(0.0, (sum, t) => sum + t.amountZAR);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.5,
+      maxChildSize: 0.9,
+      minChildSize: 0.3,
+      expand: false,
+      builder: (_, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                DateFormatter.formatDate(day),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                CurrencyFormatter.format(total, 'ZAR'),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (final t in transactions) _DayTxnRow(transaction: t),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayTxnRow extends ConsumerWidget {
+  final TransactionModel transaction;
+  const _DayTxnRow({required this.transaction});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final category =
+        ref.watch(categoryByIdProvider(transaction.category));
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        child: Text(category?.icon ?? '📋'),
+      ),
+      title: Text(transaction.vendor,
+          style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(category?.name ?? transaction.category),
+      trailing: Text(
+        CurrencyFormatter.format(transaction.amountZAR, 'ZAR'),
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+      ),
+      onTap: () => showTransactionDetail(context, transaction),
+    );
+  }
+}
+
 class TransactionDetailSheet extends ConsumerWidget {
   final TransactionModel transaction;
   const TransactionDetailSheet({super.key, required this.transaction});

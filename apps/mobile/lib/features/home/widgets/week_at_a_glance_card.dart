@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/transaction_provider.dart';
+import '../../transactions/widgets/transaction_detail_sheet.dart';
 
 class WeekAtAGlanceCard extends ConsumerWidget {
   const WeekAtAGlanceCard({super.key});
@@ -10,6 +11,7 @@ class WeekAtAGlanceCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(weeklyDailySpendProvider);
+    final allTxns = ref.watch(transactionsProvider).asData?.value ?? [];
     final maxSpend = data.map((e) => e.$2).fold(0.0, max);
     final weekTotal = data.fold(0.0, (sum, e) => sum + e.$2);
 
@@ -52,7 +54,11 @@ class WeekAtAGlanceCard extends ConsumerWidget {
                   final barHeight = (fraction * 52).clamp(4.0, 52.0);
 
                   return Expanded(
-                    child: Padding(
+                    child: GestureDetector(
+                      onTap: amount > 0
+                          ? () => showDayTransactionsSheet(context, day, allTxns)
+                          : null,
+                      child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 2),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -100,6 +106,7 @@ class WeekAtAGlanceCard extends ConsumerWidget {
                           ),
                         ],
                       ),
+                    ),
                     ),
                   );
                 }).toList(),
