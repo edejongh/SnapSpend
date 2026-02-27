@@ -32,11 +32,12 @@ extension _TxnSortLabel on _TxnSort {
 final _txnSortProvider =
     StateProvider.autoDispose<_TxnSort>((ref) => _TxnSort.newest);
 
-enum _TxnDateRange { all, thisMonth, lastMonth, last30Days, last7Days }
+enum _TxnDateRange { all, today, thisMonth, lastMonth, last30Days, last7Days }
 
 extension _TxnDateRangeLabel on _TxnDateRange {
   String get label => switch (this) {
         _TxnDateRange.all => 'All time',
+        _TxnDateRange.today => 'Today',
         _TxnDateRange.thisMonth => 'This month',
         _TxnDateRange.lastMonth => 'Last month',
         _TxnDateRange.last30Days => 'Last 30 days',
@@ -69,11 +70,15 @@ class TransactionsScreen extends ConsumerWidget {
   final String? initialCategory;
   final String? initialSearch;
   final bool initialFlagged;
+  /// Query-param name for date range. Accepted values: 'today', 'this_month',
+  /// 'last_month', 'last_7', 'last_30'.
+  final String? initialDateRange;
   const TransactionsScreen({
     super.key,
     this.initialCategory,
     this.initialSearch,
     this.initialFlagged = false,
+    this.initialDateRange,
   });
 
   @override
@@ -109,6 +114,23 @@ class TransactionsScreen extends ConsumerWidget {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(_txnFlaggedFilterProvider.notifier).state = true;
       });
+    }
+
+    // Apply deep-link date range on first build
+    if (initialDateRange != null && dateRange == _TxnDateRange.all) {
+      final mapped = switch (initialDateRange) {
+        'today' => _TxnDateRange.today,
+        'this_month' => _TxnDateRange.thisMonth,
+        'last_month' => _TxnDateRange.lastMonth,
+        'last_7' => _TxnDateRange.last7Days,
+        'last_30' => _TxnDateRange.last30Days,
+        _ => null,
+      };
+      if (mapped != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(_txnDateRangeProvider.notifier).state = mapped;
+        });
+      }
     }
 
     void exitSelection() {
@@ -376,6 +398,9 @@ class TransactionsScreen extends ConsumerWidget {
             final DateTime from;
             final DateTime? to;
             switch (dateRange) {
+              case _TxnDateRange.today:
+                from = DateTime(now.year, now.month, now.day);
+                to = null;
               case _TxnDateRange.thisMonth:
                 from = DateTime(now.year, now.month);
                 to = null;
@@ -688,6 +713,9 @@ class TransactionsScreen extends ConsumerWidget {
       DateTime from;
       DateTime? to;
       switch (dateRange) {
+        case _TxnDateRange.today:
+          from = DateTime(now.year, now.month, now.day);
+          to = null;
         case _TxnDateRange.thisMonth:
           from = DateTime(now.year, now.month);
           to = null;

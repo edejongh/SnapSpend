@@ -102,6 +102,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           initialCategory: state.extra as String?,
           initialSearch: state.uri.queryParameters['search'],
           initialFlagged: state.uri.queryParameters.containsKey('flagged'),
+          initialDateRange: state.uri.queryParameters['range'],
         ),
       ),
       GoRoute(

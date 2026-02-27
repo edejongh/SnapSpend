@@ -251,6 +251,9 @@ class _QuickStatsRow extends ConsumerWidget {
                 icon: Icons.today_outlined,
                 label: 'Today',
                 value: CurrencyFormatter.format(todaySpend, 'ZAR'),
+                onTap: todaySpend > 0
+                    ? () => context.push('/transactions?range=today')
+                    : null,
               ),
             ),
             const SizedBox(width: 12),
@@ -271,6 +274,9 @@ class _QuickStatsRow extends ConsumerWidget {
                 icon: Icons.receipt_outlined,
                 label: 'This month',
                 value: '$txnCount txn${txnCount == 1 ? '' : 's'}',
+                onTap: txnCount > 0
+                    ? () => context.push('/transactions?range=this_month')
+                    : null,
               ),
             ),
             if (streak >= 2) ...[
@@ -294,12 +300,16 @@ class _StatChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final VoidCallback? onTap;
   const _StatChip(
-      {required this.icon, required this.label, required this.value});
+      {required this.icon, required this.label, required this.value, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -330,6 +340,7 @@ class _StatChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
