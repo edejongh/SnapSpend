@@ -192,8 +192,9 @@ class SpendingInsightsCard extends ConsumerWidget {
 
     if (insights.isEmpty) return const SizedBox.shrink();
 
-    // Show at most 2 insights to keep the card compact
-    final shown = insights.take(2).toList();
+    const maxShown = 2;
+    final shown = insights.take(maxShown).toList();
+    final remaining = insights.length - maxShown;
 
     return Card(
       child: Padding(
@@ -201,12 +202,29 @@ class SpendingInsightsCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Insights',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Insights',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                if (remaining > 0)
+                  GestureDetector(
+                    onTap: () => _showAllInsights(context, insights),
+                    child: Text(
+                      '$remaining more',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 10),
             for (final insight in shown) ...[
@@ -215,6 +233,58 @@ class SpendingInsightsCard extends ConsumerWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  void _showAllInsights(BuildContext context, List<_Insight> insights) {
+    showModalBottomSheet(
+      context: context,
+      useSafeArea: true,
+      builder: (_) => _AllInsightsSheet(insights: insights),
+    );
+  }
+}
+
+class _AllInsightsSheet extends StatelessWidget {
+  final List<_Insight> insights;
+  const _AllInsightsSheet({required this.insights});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Text(
+            'All Insights',
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          for (int i = 0; i < insights.length; i++) ...[
+            _InsightRow(insight: insights[i]),
+            if (i < insights.length - 1) ...[
+              const SizedBox(height: 4),
+              const Divider(height: 16),
+            ],
+          ],
+        ],
       ),
     );
   }
