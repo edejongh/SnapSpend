@@ -373,7 +373,9 @@ class TransactionsScreen extends ConsumerWidget {
 
           final items = <_ListItem>[];
           for (final entry in groups.entries) {
-            items.add(_HeaderItem(entry.key));
+            final dailyTotal =
+                entry.value.fold(0.0, (sum, t) => sum + t.amountZAR);
+            items.add(_HeaderItem(entry.key, dailyTotal));
             for (final txn in entry.value) {
               items.add(_TxnItem(txn));
             }
@@ -430,7 +432,8 @@ class TransactionsScreen extends ConsumerWidget {
                     itemBuilder: (context, i) {
                       final item = items[i];
                       if (item is _HeaderItem) {
-                        return _DateHeader(label: item.label);
+                        return _DateHeader(
+                            label: item.label, total: item.dailyTotal);
                       }
                       final txn = (item as _TxnItem).transaction;
                       return _DismissibleTile(
@@ -671,7 +674,8 @@ sealed class _ListItem {}
 
 class _HeaderItem extends _ListItem {
   final String label;
-  _HeaderItem(this.label);
+  final double dailyTotal;
+  _HeaderItem(this.label, this.dailyTotal);
 }
 
 class _TxnItem extends _ListItem {
@@ -683,19 +687,24 @@ class _TxnItem extends _ListItem {
 
 class _DateHeader extends StatelessWidget {
   final String label;
-  const _DateHeader({required this.label});
+  final double total;
+  const _DateHeader({required this.label, required this.total});
 
   @override
   Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: Colors.grey.shade600,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        );
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: style),
+          Text(CurrencyFormatter.format(total, 'ZAR'), style: style),
+        ],
       ),
     );
   }
