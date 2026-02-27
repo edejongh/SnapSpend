@@ -461,6 +461,40 @@ class _TaxSummaryCard extends ConsumerWidget {
     required this.transactions,
   });
 
+  Future<void> _exportTax(
+      BuildContext context, WidgetRef ref) async {
+    final categories = ref.read(categoriesProvider);
+    final catById = {for (final c in categories) c.categoryId: c};
+    final period =
+        ref.read(reportPeriodProvider).replaceAll(' ', '_');
+
+    final buffer = StringBuffer();
+    buffer.writeln(
+        'Date,Vendor,Category,Amount (ZAR),Note');
+    for (final t in transactions) {
+      final catName = catById[t.category]?.name ?? t.category;
+      final note = (t.note ?? '').replaceAll(',', ';');
+      buffer.writeln(
+        '${t.date.toIso8601String().substring(0, 10)},'
+        '"${t.vendor.replaceAll('"', "'")}",'
+        '$catName,'
+        '${t.amountZAR.toStringAsFixed(2)},'
+        '$note',
+      );
+    }
+
+    final dir = await getTemporaryDirectory();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final file = File(
+        '${dir.path}/snapspend_tax_${period}_$timestamp.csv');
+    await file.writeAsString(buffer.toString());
+
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: 'text/csv')],
+      subject: 'SnapSpend Tax Report — $period',
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
@@ -488,6 +522,14 @@ class _TaxSummaryCard extends ConsumerWidget {
                         fontWeight: FontWeight.bold,
                         color: Colors.green,
                       ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.download_outlined,
+                      size: 18, color: Colors.green),
+                  tooltip: 'Export tax report',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _exportTax(context, ref),
                 ),
               ],
             ),
