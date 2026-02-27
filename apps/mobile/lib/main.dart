@@ -16,6 +16,8 @@ import 'firebase_options.dart';
 import 'router/app_router.dart';
 import 'shared/theme/app_theme.dart';
 
+final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -50,6 +52,30 @@ void main() async {
     }
   });
 
+  // Show foreground FCM messages as an in-app banner
+  FirebaseMessaging.onMessage.listen((message) {
+    final notification = message.notification;
+    if (notification == null) return;
+    final title = notification.title;
+    final body = notification.body;
+    _scaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (title != null)
+              Text(title,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            if (body != null) Text(body),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  });
+
   final container = ProviderContainer(
     overrides: [
       firebaseServiceProvider.overrideWithValue(firebaseServiceImpl),
@@ -75,6 +101,7 @@ class SnapSpendApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
       title: 'SnapSpend',
+      scaffoldMessengerKey: _scaffoldMessengerKey,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,

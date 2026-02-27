@@ -28,6 +28,21 @@ extension _TxnSortLabel on _TxnSort {
 final _txnSortProvider =
     StateProvider.autoDispose<_TxnSort>((ref) => _TxnSort.newest);
 
+enum _TxnDateRange { all, thisMonth, lastMonth, last30Days, last7Days }
+
+extension _TxnDateRangeLabel on _TxnDateRange {
+  String get label => switch (this) {
+        _TxnDateRange.all => 'All time',
+        _TxnDateRange.thisMonth => 'This month',
+        _TxnDateRange.lastMonth => 'Last month',
+        _TxnDateRange.last30Days => 'Last 30 days',
+        _TxnDateRange.last7Days => 'Last 7 days',
+      };
+}
+
+final _txnDateRangeProvider =
+    StateProvider.autoDispose<_TxnDateRange>((ref) => _TxnDateRange.all);
+
 class TransactionsScreen extends ConsumerWidget {
   const TransactionsScreen({super.key});
 
@@ -38,11 +53,52 @@ class TransactionsScreen extends ConsumerWidget {
     final categoryFilter = ref.watch(_txnCategoryFilterProvider);
     final categories = ref.watch(categoriesProvider);
     final sort = ref.watch(_txnSortProvider);
+    final dateRange = ref.watch(_txnDateRangeProvider);
 
     return AppScaffold(
       appBar: AppBar(
         title: const Text('Transactions'),
         actions: [
+          PopupMenuButton<_TxnDateRange>(
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.date_range_outlined),
+                if (dateRange != _TxnDateRange.all)
+                  Positioned(
+                    top: -2,
+                    right: -2,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            tooltip: 'Date range',
+            initialValue: dateRange,
+            onSelected: (d) =>
+                ref.read(_txnDateRangeProvider.notifier).state = d,
+            itemBuilder: (_) => _TxnDateRange.values
+                .map((d) => PopupMenuItem(
+                      value: d,
+                      child: Row(
+                        children: [
+                          if (d == dateRange)
+                            const Icon(Icons.check, size: 18)
+                          else
+                            const SizedBox(width: 18),
+                          const SizedBox(width: 8),
+                          Text(d.label),
+                        ],
+                      ),
+                    ))
+                .toList(),
+          ),
           PopupMenuButton<_TxnSort>(
             icon: const Icon(Icons.sort),
             tooltip: 'Sort',
@@ -145,6 +201,36 @@ class TransactionsScreen extends ConsumerWidget {
               : allTxns
                   .where((t) => t.category == categoryFilter)
                   .toList();
+
+          // Apply date range filter
+          if (dateRange != _TxnDateRange.all) {
+            final now = DateTime.now();
+            final DateTime from;
+            final DateTime? to;
+            switch (dateRange) {
+              case _TxnDateRange.thisMonth:
+                from = DateTime(now.year, now.month);
+                to = null;
+              case _TxnDateRange.lastMonth:
+                from = DateTime(now.year, now.month - 1);
+                to = DateTime(now.year, now.month);
+              case _TxnDateRange.last30Days:
+                from = now.subtract(const Duration(days: 30));
+                to = null;
+              case _TxnDateRange.last7Days:
+                from = now.subtract(const Duration(days: 7));
+                to = null;
+              case _TxnDateRange.all:
+                from = DateTime(2000);
+                to = null;
+            }
+            txns = txns
+                .where((t) =>
+                    !t.date.isBefore(from) &&
+                    (to == null || t.date.isBefore(to)))
+                .toList();
+          }
+
           if (query.isNotEmpty) {
             txns = txns.where((t) {
               return t.vendor.toLowerCase().contains(query) ||
@@ -189,7 +275,9 @@ class TransactionsScreen extends ConsumerWidget {
           // Summary bar when filtered or searching
           final filteredTotal =
               txns.fold(0.0, (sum, t) => sum + t.amountZAR);
-          final isFiltered = query.isNotEmpty || categoryFilter != null;
+          final isFiltered = query.isNotEmpty ||
+              categoryFilter != null ||
+              dateRange != _TxnDateRange.all;
 
           // Group by date
           final groups = <String, List<TransactionModel>>{};
