@@ -23,12 +23,33 @@ class AppScaffold extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final syncStatus =
         ref.watch(syncStatusProvider).asData?.value ?? SyncStatus.idle;
+    final isOnline = ref.watch(isOnlineProvider).asData?.value ?? true;
     final location = GoRouterState.of(context).uri.path;
 
     return Scaffold(
       appBar: appBar,
       body: Column(
         children: [
+          if (!isOnline)
+            Container(
+              width: double.infinity,
+              color: Colors.grey.shade700,
+              padding:
+                  const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+              child: Row(
+                children: [
+                  Icon(Icons.wifi_off, size: 14, color: Colors.grey.shade200),
+                  const SizedBox(width: 6),
+                  Text(
+                    'No internet — changes saved locally',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade200,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (syncStatus == SyncStatus.syncing)
             const LinearProgressIndicator(minHeight: 2),
           if (syncStatus == SyncStatus.error)
