@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:snapspend_core/snapspend_core.dart';
+import '../../../core/providers/budget_provider.dart';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 
@@ -9,6 +11,7 @@ class SpendingInsightsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final budgets = ref.watch(budgetsProvider).asData?.value ?? [];
     final topMerchant = ref.watch(topMerchantThisMonthProvider);
     final largest = ref.watch(largestTransactionThisMonthProvider);
     final monthlySpend = ref.watch(monthlySpendProvider);
@@ -114,6 +117,16 @@ class SpendingInsightsCard extends ConsumerWidget {
       }
     }
 
+    // Nudge to set up a budget if none exist but there are transactions
+    if (budgets.isEmpty && monthlySpend > 0) {
+      insights.add(_Insight(
+        icon: Icons.account_balance_wallet_outlined,
+        color: Theme.of(context).colorScheme.primary,
+        text: 'No budgets set up yet — add one to track your limits',
+        onTap: () => context.push('/settings/budget'),
+      ));
+    }
+
     if (insights.isEmpty) return const SizedBox.shrink();
 
     // Show at most 2 insights to keep the card compact
@@ -148,7 +161,8 @@ class _Insight {
   final IconData icon;
   final Color color;
   final String text;
-  const _Insight({required this.icon, required this.color, required this.text});
+  final VoidCallback? onTap;
+  const _Insight({required this.icon, required this.color, required this.text, this.onTap});
 }
 
 class _InsightRow extends StatelessWidget {
@@ -157,7 +171,7 @@ class _InsightRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final row = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(insight.icon, size: 16, color: insight.color),
@@ -170,7 +184,13 @@ class _InsightRow extends StatelessWidget {
                 ),
           ),
         ),
+        if (insight.onTap != null)
+          Icon(Icons.chevron_right, size: 14, color: Colors.grey.shade400),
       ],
     );
+    if (insight.onTap != null) {
+      return GestureDetector(onTap: insight.onTap, child: row);
+    }
+    return row;
   }
 }
