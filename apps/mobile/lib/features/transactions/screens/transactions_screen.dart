@@ -135,13 +135,20 @@ class TransactionsScreen extends ConsumerWidget {
               ),
               title: Text('${selectedIds.length} selected'),
               actions: [
-                if (selectedIds.isNotEmpty)
+                if (selectedIds.isNotEmpty) ...[
+                  IconButton(
+                    icon: const Icon(Icons.download_outlined),
+                    tooltip: 'Export selected',
+                    onPressed: () =>
+                        _exportSelected(context, ref, selectedIds),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
                     tooltip: 'Delete selected',
                     onPressed: () => txnsAsync.whenData(
                         (txns) => deleteSelected(txns)),
                   ),
+                ],
               ],
             )
           : AppBar(
@@ -702,6 +709,46 @@ class TransactionsScreen extends ConsumerWidget {
     await Share.shareXFiles(
       [XFile(file.path, mimeType: 'text/csv')],
       subject: 'SnapSpend Transactions Export',
+    );
+  }
+
+  Future<void> _exportSelected(
+      BuildContext context, WidgetRef ref, Set<String> ids) async {
+    final allTxns = ref.read(transactionsProvider).asData?.value ?? [];
+    final txns = allTxns.where((t) => ids.contains(t.txnId)).toList();
+    if (txns.isEmpty) return;
+
+    final categories = ref.read(categoriesProvider);
+    final catById = {for (final c in categories) c.categoryId: c};
+
+    final buffer = StringBuffer();
+    buffer.writeln(
+        'Date,Vendor,Category,Amount,Currency,Amount (ZAR),Tax Deductible,Note,Source');
+    for (final t in txns..sort((a, b) => b.date.compareTo(a.date))) {
+      final catName = catById[t.category]?.name ?? t.category;
+      final note = (t.note ?? '').replaceAll(',', ';');
+      buffer.writeln(
+        '${t.date.toIso8601String().substring(0, 10)},'
+        '"${t.vendor.replaceAll('"', "'")}",'
+        '$catName,'
+        '${t.amount.toStringAsFixed(2)},'
+        '${t.currency},'
+        '${t.amountZAR.toStringAsFixed(2)},'
+        '${t.isTaxDeductible ? 'Yes' : 'No'},'
+        '$note,'
+        '${t.source}',
+      );
+    }
+
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final dir = await getTemporaryDirectory();
+    final file =
+        File('${dir.path}/snapspend_selected_$timestamp.csv');
+    await file.writeAsString(buffer.toString());
+
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: 'text/csv')],
+      subject: 'SnapSpend — ${ids.length} Transactions Export',
     );
   }
 
