@@ -60,7 +60,7 @@ class AppScaffold extends ConsumerWidget {
           NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),
             selectedIcon: Icon(Icons.receipt_long),
-            label: 'Transactions',
+            label: 'History',
           ),
           NavigationDestination(
             icon: Icon(Icons.camera_alt_outlined),

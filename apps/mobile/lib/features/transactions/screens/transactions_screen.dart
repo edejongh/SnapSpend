@@ -66,192 +66,189 @@ class TransactionsScreen extends ConsumerWidget {
                 .toList(),
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize:
+              Size.fromHeight(categories.isNotEmpty ? 108 : 56),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search transactions…',
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10, horizontal: 16),
+                    suffixIcon: query.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () =>
+                                ref.read(_txnSearchProvider.notifier).state =
+                                    '',
+                          )
+                        : null,
+                  ),
+                  onChanged: (v) =>
+                      ref.read(_txnSearchProvider.notifier).state = v,
+                ),
+              ),
+              if (categories.isNotEmpty)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: FilterChip(
+                          label: const Text('All'),
+                          selected: categoryFilter == null,
+                          onSelected: (_) => ref
+                              .read(_txnCategoryFilterProvider.notifier)
+                              .state = null,
+                        ),
+                      ),
+                      ...categories.map((cat) => Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 4),
+                            child: FilterChip(
+                              avatar: Text(cat.icon,
+                                  style: const TextStyle(fontSize: 14)),
+                              label: Text(cat.name),
+                              selected: categoryFilter == cat.categoryId,
+                              onSelected: (_) => ref
+                                  .read(_txnCategoryFilterProvider.notifier)
+                                  .state = categoryFilter == cat.categoryId
+                                      ? null
+                                      : cat.categoryId,
+                            ),
+                          )),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/snap/review'),
         tooltip: 'Add transaction',
         child: const Icon(Icons.add),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search transactions…',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                contentPadding: const EdgeInsets.symmetric(
-                    vertical: 10, horizontal: 16),
-                suffixIcon: query.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () =>
-                            ref.read(_txnSearchProvider.notifier).state = '',
-                      )
-                    : null,
-              ),
-              onChanged: (v) =>
-                  ref.read(_txnSearchProvider.notifier).state = v,
-            ),
-          ),
-          // Category filter chips
-          if (categories.isNotEmpty)
-            SizedBox(
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: FilterChip(
-                      label: const Text('All'),
-                      selected: categoryFilter == null,
-                      onSelected: (_) => ref
-                          .read(_txnCategoryFilterProvider.notifier)
-                          .state = null,
-                    ),
+      body: txnsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Error: $e')),
+        data: (allTxns) {
+          var txns = categoryFilter == null
+              ? allTxns
+              : allTxns
+                  .where((t) => t.category == categoryFilter)
+                  .toList();
+          if (query.isNotEmpty) {
+            txns = txns.where((t) {
+              return t.vendor.toLowerCase().contains(query) ||
+                  t.category.toLowerCase().contains(query) ||
+                  (t.note?.toLowerCase().contains(query) ?? false);
+            }).toList();
+          }
+
+          // Apply sort
+          txns = List.of(txns);
+          switch (sort) {
+            case _TxnSort.newest:
+              txns.sort((a, b) => b.date.compareTo(a.date));
+            case _TxnSort.oldest:
+              txns.sort((a, b) => a.date.compareTo(b.date));
+            case _TxnSort.amountDesc:
+              txns.sort((a, b) => b.amountZAR.compareTo(a.amountZAR));
+            case _TxnSort.amountAsc:
+              txns.sort((a, b) => a.amountZAR.compareTo(b.amountZAR));
+            case _TxnSort.vendor:
+              txns.sort((a, b) =>
+                  a.vendor.toLowerCase().compareTo(b.vendor.toLowerCase()));
+          }
+
+          if (txns.isEmpty) {
+            if (query.isNotEmpty || categoryFilter != null) {
+              return const Center(
+                child: Text(
+                  'No matching transactions',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              );
+            }
+            return const EmptyStateWidget(
+              icon: Icons.receipt_long_outlined,
+              title: 'No transactions yet',
+              subtitle:
+                  'Tap the camera button to scan your first receipt',
+            );
+          }
+
+          // Summary bar when filtered or searching
+          final filteredTotal =
+              txns.fold(0.0, (sum, t) => sum + t.amountZAR);
+          final isFiltered = query.isNotEmpty || categoryFilter != null;
+
+          // Group by date
+          final groups = <String, List<TransactionModel>>{};
+          for (final txn in txns) {
+            groups.putIfAbsent(_dateKey(txn.date), () => []).add(txn);
+          }
+
+          final items = <_ListItem>[];
+          for (final entry in groups.entries) {
+            items.add(_HeaderItem(entry.key));
+            for (final txn in entry.value) {
+              items.add(_TxnItem(txn));
+            }
+          }
+
+          return Column(
+            children: [
+              if (isFiltered)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  color:
+                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                  child: Text(
+                    '${txns.length} result${txns.length == 1 ? '' : 's'} · '
+                    '${CurrencyFormatter.format(filteredTotal, 'ZAR')} total',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
                   ),
-                  ...categories.map((cat) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: FilterChip(
-                          avatar: Text(cat.icon,
-                              style: const TextStyle(fontSize: 14)),
-                          label: Text(cat.name),
-                          selected: categoryFilter == cat.categoryId,
-                          onSelected: (_) => ref
-                              .read(_txnCategoryFilterProvider.notifier)
-                              .state = categoryFilter == cat.categoryId
-                                  ? null
-                                  : cat.categoryId,
-                        ),
-                      )),
-                ],
+                ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async =>
+                      ref.invalidate(transactionsProvider),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: items.length,
+                    itemBuilder: (context, i) {
+                      final item = items[i];
+                      if (item is _HeaderItem) {
+                        return _DateHeader(label: item.label);
+                      }
+                      final txn = (item as _TxnItem).transaction;
+                      return _DismissibleTile(
+                        transaction: txn,
+                        onDelete: () =>
+                            _confirmDelete(context, ref, txn),
+                        onTap: () => _showDetail(context, ref, txn),
+                      );
+                    },
+                  ),
+                ),
               ),
-            ),
-          Expanded(
-            child: txnsAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-              data: (allTxns) {
-                var txns = categoryFilter == null
-                    ? allTxns
-                    : allTxns
-                        .where((t) => t.category == categoryFilter)
-                        .toList();
-                if (query.isNotEmpty) {
-                  txns = txns.where((t) {
-                    return t.vendor.toLowerCase().contains(query) ||
-                        t.category.toLowerCase().contains(query) ||
-                        (t.note?.toLowerCase().contains(query) ?? false);
-                  }).toList();
-                }
-
-                // Apply sort
-                txns = List.of(txns);
-                switch (sort) {
-                  case _TxnSort.newest:
-                    txns.sort((a, b) => b.date.compareTo(a.date));
-                  case _TxnSort.oldest:
-                    txns.sort((a, b) => a.date.compareTo(b.date));
-                  case _TxnSort.amountDesc:
-                    txns.sort((a, b) => b.amountZAR.compareTo(a.amountZAR));
-                  case _TxnSort.amountAsc:
-                    txns.sort((a, b) => a.amountZAR.compareTo(b.amountZAR));
-                  case _TxnSort.vendor:
-                    txns.sort((a, b) =>
-                        a.vendor.toLowerCase().compareTo(b.vendor.toLowerCase()));
-                }
-
-                if (txns.isEmpty) {
-                  if (query.isNotEmpty || categoryFilter != null) {
-                    return const Center(
-                      child: Text(
-                        'No matching transactions',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    );
-                  }
-                  return const EmptyStateWidget(
-                    icon: Icons.receipt_long_outlined,
-                    title: 'No transactions yet',
-                    subtitle:
-                        'Tap the camera button to scan your first receipt',
-                  );
-                }
-
-                // Summary bar when filtered or searching
-                final filteredTotal = txns.fold(
-                    0.0, (sum, t) => sum + t.amountZAR);
-                final isFiltered =
-                    query.isNotEmpty || categoryFilter != null;
-
-                // Group by date
-                final groups = <String, List<TransactionModel>>{};
-                for (final txn in txns) {
-                  groups.putIfAbsent(_dateKey(txn.date), () => []).add(txn);
-                }
-
-                final items = <_ListItem>[];
-                for (final entry in groups.entries) {
-                  items.add(_HeaderItem(entry.key));
-                  for (final txn in entry.value) {
-                    items.add(_TxnItem(txn));
-                  }
-                }
-
-                return Column(
-                  children: [
-                    if (isFiltered)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        child: Text(
-                          '${txns.length} result${txns.length == 1 ? '' : 's'} · '
-                          '${CurrencyFormatter.format(filteredTotal, 'ZAR')} total',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(
-                                color: Colors.grey.shade600,
-                                fontWeight: FontWeight.w500,
-                              ),
-                        ),
-                      ),
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: () async =>
-                            ref.invalidate(transactionsProvider),
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          itemCount: items.length,
-                          itemBuilder: (context, i) {
-                            final item = items[i];
-                            if (item is _HeaderItem) {
-                              return _DateHeader(label: item.label);
-                            }
-                            final txn = (item as _TxnItem).transaction;
-                            return _DismissibleTile(
-                              transaction: txn,
-                              onDelete: () =>
-                                  _confirmDelete(context, ref, txn),
-                              onTap: () => _showDetail(context, ref, txn),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
