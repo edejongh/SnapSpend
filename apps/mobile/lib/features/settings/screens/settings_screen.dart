@@ -4,8 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:snapspend_core/snapspend_core.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/hive_provider.dart';
+import '../../../core/providers/scan_provider.dart';
 import '../../../core/providers/sync_provider.dart';
 import '../../../core/providers/theme_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
@@ -47,6 +52,14 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Notifications'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/notifications'),
+          ),
+          _ScanUsageTile(),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.download_outlined),
+            title: const Text('Export All Data'),
+            subtitle: const Text('Download all transactions as CSV'),
+            onTap: () => _exportAllData(context, ref),
           ),
           const Divider(),
           ListTile(
@@ -269,6 +282,109 @@ class SettingsScreen extends ConsumerWidget {
         .read(firebaseServiceProvider)
         .saveUser(userModel.copyWith(defaultCurrency: selected));
     ref.invalidate(currentUserProvider);
+  }
+
+  Future<void> _exportAllData(BuildContext context, WidgetRef ref) async {
+    final txns = ref.read(transactionsProvider).asData?.value ?? [];
+    if (txns.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No transactions to export')),
+      );
+      return;
+    }
+
+    final categories = ref.read(categoriesProvider);
+    final catById = {for (final c in categories) c.categoryId: c};
+
+    final buffer = StringBuffer();
+    buffer.writeln(
+        'Date,Vendor,Category,Amount,Currency,Amount (ZAR),Tax Deductible,Note,Source');
+    for (final t in txns
+      ..sort((a, b) => b.date.compareTo(a.date))) {
+      final catName = catById[t.category]?.name ?? t.category;
+      final note = (t.note ?? '').replaceAll(',', ';');
+      buffer.writeln(
+        '${t.date.toIso8601String().substring(0, 10)},'
+        '"${t.vendor.replaceAll('"', "'")}",'
+        '$catName,'
+        '${t.amount.toStringAsFixed(2)},'
+        '${t.currency},'
+        '${t.amountZAR.toStringAsFixed(2)},'
+        '${t.isTaxDeductible ? 'Yes' : 'No'},'
+        '$note,'
+        '${t.source}',
+      );
+    }
+
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final dir = await getTemporaryDirectory();
+    final file =
+        File('${dir.path}/snapspend_all_transactions_$timestamp.csv');
+    await file.writeAsString(buffer.toString());
+
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: 'text/csv')],
+      subject: 'SnapSpend — All Transactions Export',
+    );
+  }
+}
+
+class _ScanUsageTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final used = ref.watch(monthlyScanCountProvider);
+    final limit = scanLimit;
+    final remaining = scansRemaining(used);
+    final progress = used / limit;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Monthly Scans',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              Text(
+                '$used / $limit',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: remaining <= 5
+                          ? Theme.of(context).colorScheme.error
+                          : Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          LinearProgressIndicator(
+            value: progress.clamp(0.0, 1.0),
+            backgroundColor: Colors.grey.shade200,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              remaining <= 5
+                  ? Theme.of(context).colorScheme.error
+                  : Theme.of(context).colorScheme.primary,
+            ),
+            minHeight: 4,
+            borderRadius: BorderRadius.circular(2),
+          ),
+          if (remaining <= 5)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '$remaining scan${remaining == 1 ? '' : 's'} remaining this month',
+                style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 
