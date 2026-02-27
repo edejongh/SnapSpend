@@ -80,6 +80,7 @@ class TransactionsScreen extends ConsumerWidget {
   final String? initialCategory;
   final String? initialSearch;
   final bool initialFlagged;
+  final bool autoFocusSearch;
   /// Query-param name for date range. Accepted values: 'today', 'this_month',
   /// 'last_month', 'last_7', 'last_30'.
   final String? initialDateRange;
@@ -88,6 +89,7 @@ class TransactionsScreen extends ConsumerWidget {
     this.initialCategory,
     this.initialSearch,
     this.initialFlagged = false,
+    this.autoFocusSearch = false,
     this.initialDateRange,
   });
 
@@ -350,6 +352,7 @@ class TransactionsScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                 child: TextField(
+                  autofocus: autoFocusSearch,
                   decoration: InputDecoration(
                     hintText: 'Search transactions…',
                     prefixIcon: const Icon(Icons.search, size: 20),

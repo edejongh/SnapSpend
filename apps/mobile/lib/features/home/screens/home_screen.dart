@@ -38,7 +38,7 @@ class HomeScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: 'Search transactions',
-            onPressed: () => context.push('/transactions'),
+            onPressed: () => context.push('/transactions?focus=1'),
           ),
           _NotificationBell(),
         ],
