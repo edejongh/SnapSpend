@@ -9,6 +9,7 @@ import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/reports_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
+import '../../transactions/widgets/transaction_detail_sheet.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../widgets/category_pie_chart.dart';
 import '../widgets/filter_bar.dart';
@@ -234,20 +235,32 @@ class ReportsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             for (final t in dayTxns)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(t.vendor,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(t.category),
-                trailing: Text(
-                  CurrencyFormatter.format(t.amountZAR, 'ZAR'),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-              ),
+              _DayTxnTile(transaction: t),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DayTxnTile extends ConsumerWidget {
+  final TransactionModel transaction;
+  const _DayTxnTile({required this.transaction});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final category =
+        ref.watch(categoryByIdProvider(transaction.category));
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(transaction.vendor,
+          style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(category?.name ?? transaction.category),
+      trailing: Text(
+        CurrencyFormatter.format(transaction.amountZAR, 'ZAR'),
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+      ),
+      onTap: () => showTransactionDetail(context, transaction),
     );
   }
 }
