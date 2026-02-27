@@ -54,6 +54,12 @@ final _txnAmountRangeProvider =
 final _txnTaxFilterProvider =
     StateProvider.autoDispose<bool>((ref) => false);
 
+// Multi-select mode
+final _selectionModeProvider =
+    StateProvider.autoDispose<bool>((ref) => false);
+final _selectedTxnIdsProvider =
+    StateProvider.autoDispose<Set<String>>((ref) => {});
+
 class TransactionsScreen extends ConsumerWidget {
   final String? initialCategory;
   final String? initialSearch;
@@ -69,6 +75,8 @@ class TransactionsScreen extends ConsumerWidget {
     final dateRange = ref.watch(_txnDateRangeProvider);
     final amountRange = ref.watch(_txnAmountRangeProvider);
     final taxOnly = ref.watch(_txnTaxFilterProvider);
+    final selectionMode = ref.watch(_selectionModeProvider);
+    final selectedIds = ref.watch(_selectedTxnIdsProvider);
 
     // Apply deep-link category on first build (provider is null on fresh open)
     if (initialCategory != null && categoryFilter == null) {
@@ -84,8 +92,59 @@ class TransactionsScreen extends ConsumerWidget {
       });
     }
 
+    void exitSelection() {
+      ref.read(_selectionModeProvider.notifier).state = false;
+      ref.read(_selectedTxnIdsProvider.notifier).state = {};
+    }
+
+    Future<void> deleteSelected(List<TransactionModel> allTxns) async {
+      final ids = Set<String>.from(selectedIds);
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Delete transactions?'),
+          content: Text(
+              'Delete ${ids.length} selected transaction${ids.length == 1 ? '' : 's'}? This cannot be undone.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.error),
+                child: const Text('Delete')),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      for (final id in ids) {
+        await ref
+            .read(transactionNotifierProvider.notifier)
+            .deleteTransaction(id);
+      }
+      exitSelection();
+    }
+
     return AppScaffold(
-      appBar: AppBar(
+      appBar: selectionMode
+          ? AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: exitSelection,
+              ),
+              title: Text('${selectedIds.length} selected'),
+              actions: [
+                if (selectedIds.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: 'Delete selected',
+                    onPressed: () => txnsAsync.whenData(
+                        (txns) => deleteSelected(txns)),
+                  ),
+              ],
+            )
+          : AppBar(
         title: const Text('Transactions'),
         actions: [
           IconButton(
@@ -256,11 +315,13 @@ class TransactionsScreen extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/snap/review'),
-        tooltip: 'Add transaction',
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: selectionMode
+          ? null
+          : FloatingActionButton(
+              onPressed: () => context.push('/snap/review'),
+              tooltip: 'Add transaction',
+              child: const Icon(Icons.add),
+            ),
       body: txnsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
@@ -436,11 +497,55 @@ class TransactionsScreen extends ConsumerWidget {
                             label: item.label, total: item.dailyTotal);
                       }
                       final txn = (item as _TxnItem).transaction;
+                      if (selectionMode) {
+                        final isSelected = selectedIds.contains(txn.txnId);
+                        return CheckboxListTile(
+                          value: isSelected,
+                          onChanged: (_) {
+                            final current = Set<String>.from(selectedIds);
+                            if (isSelected) {
+                              current.remove(txn.txnId);
+                            } else {
+                              current.add(txn.txnId);
+                            }
+                            ref
+                                .read(_selectedTxnIdsProvider.notifier)
+                                .state = current;
+                            if (current.isEmpty) exitSelection();
+                          },
+                          title: Text(txn.vendor,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600)),
+                          subtitle: Text(
+                            txn.note != null && txn.note!.isNotEmpty
+                                ? txn.note!
+                                : '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          secondary: Text(
+                            CurrencyFormatter.format(
+                                txn.amountZAR, 'ZAR'),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold),
+                          ),
+                          controlAffinity:
+                              ListTileControlAffinity.leading,
+                        );
+                      }
                       return _DismissibleTile(
                         transaction: txn,
                         onDelete: () =>
                             _confirmDelete(context, ref, txn),
                         onTap: () => _showDetail(context, ref, txn),
+                        onLongPress: () {
+                          ref
+                              .read(_selectionModeProvider.notifier)
+                              .state = true;
+                          ref
+                              .read(_selectedTxnIdsProvider.notifier)
+                              .state = {txn.txnId};
+                        },
                       );
                     },
                   ),
@@ -716,11 +821,13 @@ class _DismissibleTile extends StatelessWidget {
   final TransactionModel transaction;
   final VoidCallback onDelete;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   const _DismissibleTile({
     required this.transaction,
     required this.onDelete,
     required this.onTap,
+    this.onLongPress,
   });
 
   @override
@@ -749,7 +856,10 @@ class _DismissibleTile extends StatelessWidget {
         color: Theme.of(context).colorScheme.error,
         child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
-      child: _TransactionTile(transaction: transaction, onTap: onTap),
+      child: _TransactionTile(
+          transaction: transaction,
+          onTap: onTap,
+          onLongPress: onLongPress),
     );
   }
 }
@@ -759,8 +869,10 @@ class _DismissibleTile extends StatelessWidget {
 class _TransactionTile extends ConsumerWidget {
   final TransactionModel transaction;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
-  const _TransactionTile({required this.transaction, required this.onTap});
+  const _TransactionTile(
+      {required this.transaction, required this.onTap, this.onLongPress});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -768,6 +880,7 @@ class _TransactionTile extends ConsumerWidget {
 
     return ListTile(
       onTap: onTap,
+      onLongPress: onLongPress,
       leading: transaction.receiptStoragePath != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(8),
@@ -803,7 +916,13 @@ class _TransactionTile extends ConsumerWidget {
         transaction.vendor,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
-      subtitle: Text(category?.name ?? transaction.category),
+      subtitle: Text(
+        transaction.note != null && transaction.note!.isNotEmpty
+            ? '${category?.name ?? transaction.category} · ${transaction.note}'
+            : category?.name ?? transaction.category,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
