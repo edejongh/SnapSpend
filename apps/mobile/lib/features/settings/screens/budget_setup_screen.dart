@@ -79,15 +79,76 @@ class _BudgetTile extends ConsumerWidget {
         ? '${category.icon} ${category.name}'
         : 'Overall';
 
+    final utilisation = ref.watch(budgetUtilisationProvider);
+    final utilisationKey = budget.categoryId ?? 'overall';
+    final pct = (utilisation[utilisationKey] ?? 0.0).clamp(0.0, 1.0);
+
+    // Current spend for this budget
+    final monthlySpend = ref.watch(monthlySpendProvider);
+    final spendByCategory = ref.watch(spendByCategoryProvider);
+    final spent = budget.categoryId == null
+        ? monthlySpend
+        : (spendByCategory[budget.categoryId] ?? 0.0);
+
+    final isOver = pct >= 1.0;
+    final isNearLimit = pct >= budget.alertAt;
+    final barColor = isOver
+        ? Theme.of(context).colorScheme.error
+        : isNearLimit
+            ? Colors.orange
+            : Theme.of(context).colorScheme.primary;
+
     return Card(
-      child: ListTile(
-        title: Text(budget.name),
-        subtitle: Text(
-          '$label · ${CurrencyFormatter.format(budget.limitAmount, 'ZAR')} / month'
-          ' · alert at ${(budget.alertAt * 100).toInt()}%',
-        ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
         onTap: () => _showBudgetSheet(context, ref, budget),
-        trailing: IconButton(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(budget.name,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600)),
+                        Text(
+                          '${CurrencyFormatter.format(spent, 'ZAR')} / ${CurrencyFormatter.format(budget.limitAmount, 'ZAR')}',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                    color: isOver
+                                        ? Theme.of(context)
+                                            .colorScheme
+                                            .error
+                                        : Colors.grey.shade600,
+                                  ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(
+                      value: pct,
+                      backgroundColor: Colors.grey.shade200,
+                      valueColor: AlwaysStoppedAnimation<Color>(barColor),
+                      minHeight: 6,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$label · ${(pct * 100).toStringAsFixed(0)}% used',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey.shade600,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
           icon: const Icon(Icons.delete_outline),
           onPressed: () async {
             final confirmed = await showDialog<bool>(
@@ -111,6 +172,9 @@ class _BudgetTile extends ConsumerWidget {
                   .deleteBudget(budget.budgetId);
             }
           },
+              ),
+            ],
+          ),
         ),
       ),
     );
