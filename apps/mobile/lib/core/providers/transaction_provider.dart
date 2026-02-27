@@ -140,6 +140,35 @@ final spendByCategoryProvider = Provider<Map<String, double>>((ref) {
   return map;
 });
 
+// Most-visited vendor this month (only shown when visited 2+ times)
+final topMerchantThisMonthProvider = Provider<(String, int)?>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  final now = DateTime.now();
+  final thisMonth = txns
+      .where((t) => t.date.year == now.year && t.date.month == now.month)
+      .toList();
+  if (thisMonth.isEmpty) return null;
+  final counts = <String, int>{};
+  for (final t in thisMonth) {
+    counts[t.vendor] = (counts[t.vendor] ?? 0) + 1;
+  }
+  final top =
+      counts.entries.reduce((a, b) => a.value >= b.value ? a : b);
+  return top.value >= 2 ? (top.key, top.value) : null;
+});
+
+// Largest single transaction this month
+final largestTransactionThisMonthProvider =
+    Provider<TransactionModel?>((ref) {
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  final now = DateTime.now();
+  final thisMonth = txns
+      .where((t) => t.date.year == now.year && t.date.month == now.month)
+      .toList();
+  if (thisMonth.isEmpty) return null;
+  return thisMonth.reduce((a, b) => a.amountZAR >= b.amountZAR ? a : b);
+});
+
 // Transaction CRUD notifier
 class TransactionNotifier extends AsyncNotifier<void> {
   @override
