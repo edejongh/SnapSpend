@@ -179,6 +179,21 @@ final reportTaxTransactionsProvider =
       .toList();
 });
 
+/// Spend by category for the previous period (for trend indicators).
+final previousPeriodSpendByCategoryProvider =
+    Provider<Map<String, double>>((ref) {
+  final period = ref.watch(reportPeriodProvider);
+  final txns = ref.watch(transactionsProvider).asData?.value ?? [];
+  final (from, to) = _previousPeriodDateRange(period);
+  final prevTxns =
+      txns.where((t) => !t.date.isBefore(from) && !t.date.isAfter(to));
+  final map = <String, double>{};
+  for (final t in prevTxns) {
+    map[t.category] = (map[t.category] ?? 0.0) + t.amountZAR;
+  }
+  return map;
+});
+
 /// Daily spend totals for a single-month period. Key = "YYYY-MM-DD".
 /// Only populated when the selected period is a single month.
 final reportSpendByDayProvider = Provider<Map<String, double>>((ref) {
