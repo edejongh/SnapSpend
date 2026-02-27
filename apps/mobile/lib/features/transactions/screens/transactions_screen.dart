@@ -538,17 +538,27 @@ class TransactionsScreen extends ConsumerWidget {
               taxOnly ||
               flaggedOnly;
 
-          // Group by date
+          // Group by month when viewing "all time" for a cleaner overview,
+          // otherwise group by day.
+          final groupByMonth = dateRange == _TxnDateRange.all &&
+              query.isEmpty &&
+              categoryFilter == null &&
+              !taxOnly &&
+              !flaggedOnly;
+
           final groups = <String, List<TransactionModel>>{};
           for (final txn in txns) {
-            groups.putIfAbsent(_dateKey(txn.date), () => []).add(txn);
+            final key = groupByMonth
+                ? _monthKey(txn.date)
+                : _dateKey(txn.date);
+            groups.putIfAbsent(key, () => []).add(txn);
           }
 
           final items = <_ListItem>[];
           for (final entry in groups.entries) {
-            final dailyTotal =
+            final periodTotal =
                 entry.value.fold(0.0, (sum, t) => sum + t.amountZAR);
-            items.add(_HeaderItem(entry.key, dailyTotal));
+            items.add(_HeaderItem(entry.key, periodTotal));
             for (final txn in entry.value) {
               items.add(_TxnItem(txn));
             }
@@ -703,6 +713,17 @@ class TransactionsScreen extends ConsumerWidget {
     if (d == today) return 'Today';
     if (d == today.subtract(const Duration(days: 1))) return 'Yesterday';
     return DateFormatter.formatDate(date);
+  }
+
+  String _monthKey(DateTime date) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    final now = DateTime.now();
+    if (date.year == now.year && date.month == now.month) return 'This month';
+    if (date.year == now.year && date.month == now.month - 1) return 'Last month';
+    return '${months[date.month - 1]} ${date.year}';
   }
 
   Future<void> _confirmDelete(
