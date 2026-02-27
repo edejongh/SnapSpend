@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:snapspend_core/snapspend_core.dart';
+import 'dart:math';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/reports_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
@@ -24,6 +25,7 @@ class ReportsScreen extends ConsumerWidget {
     final spendByMonth = ref.watch(reportSpendByMonthProvider);
     final taxTotal = ref.watch(reportTaxDeductibleProvider);
     final taxTxns = ref.watch(reportTaxTransactionsProvider);
+    final dayOfWeekSpend = ref.watch(reportSpendByDayOfWeekProvider);
     final txnsAsync = ref.watch(transactionsProvider);
 
     return AppScaffold(
@@ -71,6 +73,10 @@ class ReportsScreen extends ConsumerWidget {
                 spendByCategory: spendByCategory,
                 total: total,
               ),
+            ],
+            if (dayOfWeekSpend.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _DayOfWeekCard(data: dayOfWeekSpend),
             ],
             if (spendByCategory.isEmpty)
               const Center(
@@ -405,6 +411,101 @@ class _TaxSummaryCard extends ConsumerWidget {
                 ),
               );
             }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Day-of-week chart ─────────────────────────────────────────────────────────
+
+class _DayOfWeekCard extends StatelessWidget {
+  final Map<int, double> data;
+  const _DayOfWeekCard({required this.data});
+
+  static const _days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  @override
+  Widget build(BuildContext context) {
+    final maxVal = data.values.fold(0.0, max);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Spending by Day of Week',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Average spend per day over this period',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey.shade600,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 80,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: List.generate(7, (i) {
+                  final weekday = i + 1;
+                  final amount = data[weekday] ?? 0.0;
+                  final fraction = maxVal > 0 ? (amount / maxVal) : 0.0;
+                  final barH = (fraction * 56).clamp(4.0, 56.0);
+                  final isWeekend = weekday >= 6;
+                  final isMax = amount > 0 && amount == maxVal;
+
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 500),
+                            curve: Curves.easeOut,
+                            height: barH,
+                            decoration: BoxDecoration(
+                              color: isMax
+                                  ? Theme.of(context).colorScheme.primary
+                                  : isWeekend
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .secondaryContainer
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _days[i],
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isMax
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.grey.shade500,
+                              fontWeight: isMax
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
           ],
         ),
       ),

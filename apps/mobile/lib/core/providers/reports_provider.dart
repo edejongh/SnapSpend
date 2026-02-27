@@ -121,6 +121,20 @@ final reportSpendByMonthProvider = Provider<Map<String, double>>((ref) {
   return map;
 });
 
+/// Average spend per day of week (1=Monday…7=Sunday) across the period.
+final reportSpendByDayOfWeekProvider = Provider<Map<int, double>>((ref) {
+  final txns = ref.watch(reportTransactionsProvider);
+  if (txns.isEmpty) return {};
+  final sums = <int, double>{};
+  final counts = <int, int>{};
+  for (final t in txns) {
+    final d = t.date.weekday;
+    sums[d] = (sums[d] ?? 0.0) + t.amountZAR;
+    counts[d] = (counts[d] ?? 0) + 1;
+  }
+  return {for (final d in sums.keys) d: sums[d]! / counts[d]!};
+});
+
 /// Total tax-deductible spend in the selected period.
 final reportTaxDeductibleProvider = Provider<double>((ref) {
   return ref

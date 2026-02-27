@@ -53,6 +53,19 @@ void main() async {
     }
   });
 
+  // Show notification snackbar when app is opened from a background message
+  FirebaseMessaging.onMessageOpenedApp.listen((message) {
+    final notification = message.notification;
+    if (notification == null) return;
+    _scaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(
+        content: Text(notification.body ?? notification.title ?? 'Notification'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  });
+
   // Show foreground FCM messages as an in-app banner
   FirebaseMessaging.onMessage.listen((message) {
     final notification = message.notification;
