@@ -27,26 +27,17 @@ final firebaseServiceProvider = Provider<FirebaseService>((ref) {
   );
 });
 
-String _friendlyAuthError(FirebaseAuthException e) {
-  switch (e.code) {
-    case 'user-not-found':
-    case 'wrong-password':
-    case 'invalid-credential':
-      return 'Invalid email or password.';
-    case 'email-already-in-use':
-      return 'An account with this email already exists.';
-    case 'weak-password':
-      return 'Password is too weak. Use at least 6 characters.';
-    case 'invalid-email':
-      return 'Please enter a valid email address.';
-    case 'too-many-requests':
-      return 'Too many attempts. Please try again later.';
-    case 'network-request-failed':
-      return 'Network error. Check your connection and try again.';
-    default:
-      return 'Something went wrong. Please try again.';
-  }
-}
+String _friendlyAuthError(FirebaseAuthException e) => switch (e.code) {
+      'user-not-found' || 'wrong-password' || 'invalid-credential' =>
+        'Invalid email or password.',
+      'email-already-in-use' => 'An account with this email already exists.',
+      'weak-password' => 'Password is too weak. Use at least 6 characters.',
+      'invalid-email' => 'Please enter a valid email address.',
+      'too-many-requests' => 'Too many attempts. Please try again later.',
+      'network-request-failed' =>
+        'Network error. Check your connection and try again.',
+      _ => 'Something went wrong. Please try again.',
+    };
 
 // Auth actions notifier
 class AuthNotifier extends AsyncNotifier<void> {
