@@ -472,6 +472,9 @@ class _CategoryBreakdown extends ConsumerWidget {
               final hasTrend = prev > 0;
               final isUp = hasTrend && e.value > prev;
               final isDown = hasTrend && e.value < prev;
+              final changePct = hasTrend
+                  ? ((e.value - prev) / prev * 100).abs()
+                  : 0.0;
               return InkWell(
                 borderRadius: BorderRadius.circular(8),
                 onTap: () => context.go('/transactions', extra: e.key),
@@ -497,21 +500,34 @@ class _CategoryBreakdown extends ConsumerWidget {
                               ),
                               Row(
                                 children: [
-                                  if (hasTrend)
+                                  if (hasTrend) ...[
                                     Icon(
                                       isUp
                                           ? Icons.arrow_upward
                                           : isDown
                                               ? Icons.arrow_downward
                                               : Icons.remove,
-                                      size: 12,
+                                      size: 11,
                                       color: isUp
                                           ? Colors.red.shade600
                                           : isDown
                                               ? Colors.green.shade600
                                               : Colors.grey,
                                     ),
-                                  if (hasTrend) const SizedBox(width: 2),
+                                    Text(
+                                      '${changePct.toStringAsFixed(0)}%',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: isUp
+                                            ? Colors.red.shade600
+                                            : isDown
+                                                ? Colors.green.shade600
+                                                : Colors.grey,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                  ],
                                   Text(
                                     CurrencyFormatter.format(e.value, 'ZAR'),
                                     style: Theme.of(context)
