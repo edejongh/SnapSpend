@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/users_provider.dart';
-import '../../../core/services/admin_firebase_service.dart';
 import '../../../shared/widgets/admin_sidebar.dart';
 import '../../../shared/widgets/stat_chip.dart';
 
@@ -181,16 +180,11 @@ class _PlanDropdown extends StatefulWidget {
 class _PlanDropdownState extends State<_PlanDropdown> {
   bool _saving = false;
 
-  Color _planColor(String plan) {
-    switch (plan) {
-      case 'pro':
-        return Colors.blue;
-      case 'business':
-        return Colors.purple;
-      default:
-        return Colors.grey;
-    }
-  }
+  Color _planColor(String plan) => switch (plan) {
+        'pro' => Colors.blue,
+        'business' => Colors.purple,
+        _ => Colors.grey,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -233,8 +227,7 @@ class _PlanDropdownState extends State<_PlanDropdown> {
         if (plan == widget.user.plan) return;
         setState(() => _saving = true);
         try {
-          await AdminFirebaseService()
-              .updateUserPlan(widget.user.uid, plan);
+          await widget.ref.read(adminFirebaseServiceProvider).updateUserPlan(widget.user.uid, plan);
           widget.ref.invalidate(userDetailProvider(widget.user.uid));
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(

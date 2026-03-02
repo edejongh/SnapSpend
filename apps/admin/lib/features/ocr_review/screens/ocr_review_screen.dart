@@ -114,8 +114,7 @@ class _FlagDetailPanel extends ConsumerWidget {
       'dismissed': 'dismissed',
     };
     try {
-      await AdminFirebaseService()
-          .resolveFlag(transaction.txnId, resolution);
+      await ref.read(adminFirebaseServiceProvider).resolveFlag(transaction.txnId, resolution);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

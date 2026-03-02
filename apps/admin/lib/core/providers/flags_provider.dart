@@ -5,7 +5,11 @@ import 'users_provider.dart';
 
 final openFlagsProvider = StreamProvider<List<TransactionModel>>((ref) {
   final service = ref.watch(adminFirebaseServiceProvider);
-  return service.streamOpenFlags();
+  // Sort by confidence ascending so the most uncertain flags appear first.
+  return service.streamOpenFlags().map(
+    (flags) => flags..sort((a, b) =>
+        (a.ocrConfidence ?? 0).compareTo(b.ocrConfidence ?? 0)),
+  );
 });
 
 final receiptDownloadUrlProvider =
