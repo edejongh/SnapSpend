@@ -335,7 +335,7 @@ class TransactionDetailSheet extends ConsumerWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Hero(
-                  tag: 'receipt_${t.txnId}',
+                  tag: t.receiptStoragePath!,
                   child: Image.network(
                     t.receiptStoragePath!,
                     fit: BoxFit.contain,
