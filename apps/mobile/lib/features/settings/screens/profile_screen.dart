@@ -9,6 +9,7 @@ import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../transactions/widgets/transaction_detail_sheet.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -484,6 +485,7 @@ class _LifetimeStatsSection extends ConsumerWidget {
             icon: Icons.arrow_upward_outlined,
             label: 'Biggest purchase',
             value: '${biggest.vendor} · ${CurrencyFormatter.format(biggest.amountZAR, 'ZAR')}',
+            onTap: () => showTransactionDetail(context, biggest),
           ),
         if (topMonthLabel != null)
           _StatRow(
@@ -506,12 +508,13 @@ class _StatRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final VoidCallback? onTap;
   const _StatRow(
-      {required this.icon, required this.label, required this.value});
+      {required this.icon, required this.label, required this.value, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
@@ -528,8 +531,20 @@ class _StatRow extends StatelessWidget {
             value,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
+          if (onTap != null) ...[
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right, size: 16, color: Colors.grey.shade400),
+          ],
         ],
       ),
     );
+    if (onTap != null) {
+      return InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: onTap,
+        child: content,
+      );
+    }
+    return content;
   }
 }
