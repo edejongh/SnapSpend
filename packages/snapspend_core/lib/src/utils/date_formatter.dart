@@ -13,10 +13,12 @@ class DateFormatter {
 
   static String formatRelative(DateTime date) {
     final now = DateTime.now();
-    final diff = now.difference(date);
-    if (diff.inDays == 0) return 'Today';
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inDays < 7) return '${diff.inDays} days ago';
+    final today = DateTime(now.year, now.month, now.day);
+    final dateDay = DateTime(date.year, date.month, date.day);
+    final diff = today.difference(dateDay).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+    if (diff > 1 && diff < 7) return '$diff days ago';
     return formatDate(date);
   }
 
