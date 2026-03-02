@@ -502,6 +502,7 @@ class _QuickStatsRow extends ConsumerWidget {
                   value: dailyAllowance <= 0
                       ? 'Over budget'
                       : CurrencyFormatter.format(dailyAllowance, 'ZAR'),
+                  onTap: () => context.push('/settings/budget'),
                 ),
               ),
             ],
