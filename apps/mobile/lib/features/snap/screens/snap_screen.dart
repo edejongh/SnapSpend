@@ -199,8 +199,8 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: remaining <= 5
-                    ? Colors.red.withOpacity(0.8)
-                    : Colors.white.withOpacity(0.15),
+                    ? Colors.red.withValues(alpha: 0.8)
+                    : Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -253,7 +253,7 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 3),
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withValues(alpha: 0.15),
                     ),
                     child: Icon(
                       Icons.camera,
@@ -297,12 +297,12 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.camera_alt_outlined,
-                  size: 72, color: Colors.white.withOpacity(0.4)),
+                  size: 72, color: Colors.white.withValues(alpha: 0.4)),
               const SizedBox(height: 16),
               Text(
                 _initError ?? 'Camera not available',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
               ),
               const SizedBox(height: 16),
               TextButton.icon(

@@ -160,7 +160,9 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
             .ref()
             .child('receipts/$uid/$txnId.jpg');
         await storageRef.putFile(File(ocr!.imagePath!));
-        receiptStoragePath = await storageRef.getDownloadURL();
+        // Store the storage path (not the download URL) so the admin
+        // service can resolve it to a URL on demand.
+        receiptStoragePath = storageRef.fullPath;
       } catch (_) {
         // Non-fatal — transaction is saved without an image
       }

@@ -36,14 +36,20 @@ class _UsersListScreenState extends ConsumerState<UsersListScreen> {
                       width: 280,
                       child: TextField(
                         decoration: const InputDecoration(
-                          hintText: 'Search by email...',
+                          hintText: 'Search by name or email...',
                           prefixIcon: Icon(Icons.search),
                           isDense: true,
                         ),
                         onChanged: (v) => setState(() => _searchQuery = v),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Refresh',
+                      onPressed: () => ref.invalidate(usersProvider),
+                    ),
+                    const SizedBox(width: 8),
                   ],
                 ),
                 Expanded(
@@ -52,64 +58,117 @@ class _UsersListScreenState extends ConsumerState<UsersListScreen> {
                         const Center(child: CircularProgressIndicator()),
                     error: (e, _) => Center(child: Text('Error: $e')),
                     data: (users) {
+                      final q = _searchQuery.toLowerCase();
                       final filtered = _searchQuery.isEmpty
                           ? users
                           : users
                               .where(
-                                (u) => u.email.toLowerCase().contains(
-                                      _searchQuery.toLowerCase(),
-                                    ),
+                                (u) =>
+                                    u.email.toLowerCase().contains(q) ||
+                                    (u.displayName
+                                            ?.toLowerCase()
+                                            .contains(q) ??
+                                        false),
                               )
                               .toList();
 
                       return Padding(
                         padding: const EdgeInsets.all(24),
-                        child: Card(
-                          child: DataTable2(
-                            columnSpacing: 16,
-                            columns: const [
-                              DataColumn2(label: Text('Email'), size: ColumnSize.L),
-                              DataColumn(label: Text('Plan')),
-                              DataColumn(label: Text('Joined')),
-                              DataColumn(label: Text('Last Active')),
-                              DataColumn(label: Text('Actions')),
-                            ],
-                            rows: filtered.map((user) {
-                              return DataRow2(
-                                onTap: () =>
-                                    context.go('/users/${user.uid}'),
-                                cells: [
-                                  DataCell(Text(user.email)),
-                                  DataCell(
-                                    StatChip(
-                                      label: user.plan.toUpperCase(),
-                                      color: _planColor(user.plan),
-                                    ),
-                                  ),
-                                  DataCell(
-                                    Text(
-                                      DateFormatter.formatShort(
-                                          user.createdAt),
-                                    ),
-                                  ),
-                                  DataCell(
-                                    Text(
-                                      DateFormatter.formatRelative(
-                                          user.lastActiveAt),
-                                    ),
-                                  ),
-                                  DataCell(
-                                    IconButton(
-                                      icon: const Icon(Icons.open_in_new,
-                                          size: 18),
-                                      onPressed: () =>
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Text(
+                                _searchQuery.isEmpty
+                                    ? '${users.length} users total'
+                                    : '${filtered.length} of ${users.length} users',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: Colors.grey.shade600),
+                              ),
+                            ),
+                            Expanded(
+                              child: Card(
+                                child: DataTable2(
+                                  columnSpacing: 16,
+                                  columns: const [
+                                    DataColumn2(
+                                        label: Text('User'),
+                                        size: ColumnSize.L),
+                                    DataColumn(label: Text('Plan')),
+                                    DataColumn(label: Text('Joined')),
+                                    DataColumn(label: Text('Last Active')),
+                                    DataColumn(label: Text('Actions')),
+                                  ],
+                                  rows: filtered.map((user) {
+                                    return DataRow2(
+                                      onTap: () =>
                                           context.go('/users/${user.uid}'),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }).toList(),
-                          ),
+                                      cells: [
+                                        DataCell(
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              if (user.displayName != null)
+                                                Text(
+                                                  user.displayName!,
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w500),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              Text(
+                                                user.email,
+                                                style: TextStyle(
+                                                  fontSize: user.displayName !=
+                                                          null
+                                                      ? 12
+                                                      : 14,
+                                                  color: user.displayName !=
+                                                          null
+                                                      ? Colors.grey.shade600
+                                                      : null,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        DataCell(
+                                          StatChip(
+                                            label: user.plan.toUpperCase(),
+                                            color: _planColor(user.plan),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(DateFormatter.formatShort(
+                                              user.createdAt)),
+                                        ),
+                                        DataCell(
+                                          Text(DateFormatter.formatRelative(
+                                              user.lastActiveAt)),
+                                        ),
+                                        DataCell(
+                                          IconButton(
+                                            icon: const Icon(Icons.open_in_new,
+                                                size: 18),
+                                            onPressed: () => context
+                                                .go('/users/${user.uid}'),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -124,13 +183,10 @@ class _UsersListScreenState extends ConsumerState<UsersListScreen> {
   }
 
   Color _planColor(String plan) {
-    switch (plan) {
-      case 'pro':
-        return Colors.blue;
-      case 'business':
-        return Colors.purple;
-      default:
-        return Colors.grey;
-    }
+    return switch (plan) {
+      'pro' => Colors.blue,
+      'business' => Colors.purple,
+      _ => Colors.grey,
+    };
   }
 }

@@ -20,7 +20,7 @@ class AdminTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: background,
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -38,9 +38,9 @@ class AdminTheme {
           fontWeight: FontWeight.bold,
           color: textMedium,
         ),
-        dataRowColor: MaterialStateProperty.resolveWith(
-          (states) => states.contains(MaterialState.hovered)
-              ? primary.withOpacity(0.04)
+        dataRowColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.hovered)
+              ? primary.withValues(alpha: 0.04)
               : null,
         ),
       ),
