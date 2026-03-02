@@ -468,6 +468,9 @@ class _CategoryBreakdown extends ConsumerWidget {
             ...spendByCategory.entries.map((e) {
               final category = ref.watch(categoryByIdProvider(e.key));
               final pct = total > 0 ? (e.value / total * 100) : 0.0;
+              final catColor = category != null
+                  ? _hexToColor(category.color)
+                  : Theme.of(context).colorScheme.primary;
               final prev = prevByCategory[e.key] ?? 0.0;
               final hasTrend = prev > 0;
               final isUp = hasTrend && e.value > prev;
@@ -547,6 +550,8 @@ class _CategoryBreakdown extends ConsumerWidget {
                           LinearProgressIndicator(
                             value: pct / 100,
                             backgroundColor: Colors.grey.shade200,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(catColor),
                             minHeight: 4,
                             borderRadius: BorderRadius.circular(2),
                           ),
@@ -562,6 +567,14 @@ class _CategoryBreakdown extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+Color _hexToColor(String hex) {
+  try {
+    return Color(int.parse(hex.replaceFirst('#', '0xFF')));
+  } catch (_) {
+    return Colors.grey;
   }
 }
 
