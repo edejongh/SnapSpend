@@ -645,33 +645,40 @@ class _TaxSummaryCardState extends ConsumerState<_TaxSummaryCard> {
             const SizedBox(height: 12),
             ...shown.map((t) {
               final category = ref.watch(categoryByIdProvider(t.category));
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Text(category?.icon ?? '📋'),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(t.vendor,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w500)),
-                          Text(
-                            DateFormatter.formatDate(t.date),
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600),
-                          ),
-                        ],
+              return InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => showTransactionDetail(context, t),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Text(category?.icon ?? '📋'),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(t.vendor,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500)),
+                            Text(
+                              DateFormatter.formatDate(t.date),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Text(
-                      CurrencyFormatter.format(t.amountZAR, 'ZAR'),
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ],
+                      Text(
+                        CurrencyFormatter.format(t.amountZAR, 'ZAR'),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.chevron_right,
+                          size: 14, color: Colors.grey.shade400),
+                    ],
+                  ),
                 ),
               );
             }),

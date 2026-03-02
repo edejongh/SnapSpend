@@ -5,6 +5,7 @@ import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/budget_provider.dart';
 import '../../../core/providers/category_provider.dart';
+import '../../../core/providers/reports_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../widgets/budget_alert_banner.dart';
@@ -346,41 +347,48 @@ class _FreshMonthBanner extends ConsumerWidget {
     final lastMonth = DateTime(now.year, now.month - 1);
     final monthName = _months[lastMonth.month - 1];
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.purple.shade50,
-        border: Border.all(color: Colors.purple.shade200),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          const Text('🎉', style: TextStyle(fontSize: 18)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'New month!',
-                  style: TextStyle(
-                    color: Colors.purple.shade800,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
+    return GestureDetector(
+      onTap: () {
+        ref.read(reportPeriodProvider.notifier).state = 'Last Month';
+        context.push('/reports');
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.purple.shade50,
+          border: Border.all(color: Colors.purple.shade200),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            const Text('🎉', style: TextStyle(fontSize: 18)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'New month!',
+                    style: TextStyle(
+                      color: Colors.purple.shade800,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
-                ),
-                Text(
-                  'You spent ${CurrencyFormatter.format(lastMonthSpend, 'ZAR')} in $monthName',
-                  style: TextStyle(
-                    color: Colors.purple.shade700,
-                    fontSize: 12,
+                  Text(
+                    'You spent ${CurrencyFormatter.format(lastMonthSpend, 'ZAR')} in $monthName',
+                    style: TextStyle(
+                      color: Colors.purple.shade700,
+                      fontSize: 12,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            Icon(Icons.chevron_right, size: 16, color: Colors.purple.shade400),
+          ],
+        ),
       ),
     );
   }
