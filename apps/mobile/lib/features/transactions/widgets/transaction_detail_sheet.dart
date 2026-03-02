@@ -1,3 +1,4 @@
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -323,34 +324,7 @@ class TransactionDetailSheet extends ConsumerWidget {
           ),
           if (t.receiptStoragePath != null) ...[
             const SizedBox(height: 12),
-            GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  fullscreenDialog: true,
-                  builder: (_) =>
-                      _ReceiptViewer(url: t.receiptStoragePath!),
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Hero(
-                  tag: t.receiptStoragePath!,
-                  child: Image.network(
-                    t.receiptStoragePath!,
-                    fit: BoxFit.contain,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return const SizedBox(
-                        height: 160,
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    },
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                  ),
-                ),
-              ),
-            ),
+            _ReceiptImage(storagePath: t.receiptStoragePath!),
             Align(
               alignment: Alignment.centerRight,
               child: Text(
@@ -477,9 +451,78 @@ class TransactionDetailSheet extends ConsumerWidget {
   }
 }
 
+/// Resolves a Firebase Storage path (or legacy HTTPS download URL) and
+/// shows the receipt image. Tapping opens the full-screen viewer.
+class _ReceiptImage extends StatefulWidget {
+  final String storagePath;
+  const _ReceiptImage({required this.storagePath});
+
+  @override
+  State<_ReceiptImage> createState() => _ReceiptImageState();
+}
+
+class _ReceiptImageState extends State<_ReceiptImage> {
+  late final Future<String> _urlFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final path = widget.storagePath;
+    _urlFuture = path.startsWith('https://')
+        ? Future.value(path)
+        : FirebaseStorage.instance.ref(path).getDownloadURL();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String>(
+      future: _urlFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox(
+            height: 160,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final url = snapshot.data!;
+        return GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              fullscreenDialog: true,
+              builder: (_) =>
+                  _ReceiptViewer(url: url, heroTag: widget.storagePath),
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Hero(
+              tag: widget.storagePath,
+              child: Image.network(
+                url,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return const SizedBox(
+                    height: 160,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                },
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _ReceiptViewer extends StatelessWidget {
   final String url;
-  const _ReceiptViewer({required this.url});
+  // heroTag must match the tag used in _ReceiptImage (the storage path).
+  final String heroTag;
+  const _ReceiptViewer({required this.url, required this.heroTag});
 
   @override
   Widget build(BuildContext context) {
@@ -495,7 +538,7 @@ class _ReceiptViewer extends StatelessWidget {
           minScale: 0.5,
           maxScale: 5.0,
           child: Hero(
-            tag: url,
+            tag: heroTag,
             child: Image.network(
               url,
               fit: BoxFit.contain,
