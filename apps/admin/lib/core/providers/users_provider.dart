@@ -16,3 +16,9 @@ final userDetailProvider =
   final service = ref.watch(adminFirebaseServiceProvider);
   return service.getUser(uid);
 });
+
+final userTransactionsProvider =
+    FutureProvider.family<List<TransactionModel>, String>((ref, uid) async {
+  final service = ref.watch(adminFirebaseServiceProvider);
+  return service.getUserTransactions(uid);
+});

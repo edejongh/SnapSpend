@@ -5,6 +5,7 @@ import '../../../core/providers/flags_provider.dart';
 import '../../../core/services/admin_firebase_service.dart';
 import '../../../shared/widgets/admin_sidebar.dart';
 import '../widgets/flag_card.dart';
+import '../widgets/receipt_image_viewer.dart';
 
 class OcrReviewScreen extends ConsumerStatefulWidget {
   const OcrReviewScreen({super.key});
@@ -43,7 +44,15 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                           width: 360,
                           child: flags.isEmpty
                               ? const Center(
-                                  child: Text('No open flags'),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.check_circle_outline,
+                                          size: 48, color: Colors.green),
+                                      SizedBox(height: 12),
+                                      Text('No open flags'),
+                                    ],
+                                  ),
                                 )
                               : ListView.builder(
                                   padding: const EdgeInsets.all(16),
@@ -72,7 +81,6 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                                   transaction: _selectedFlag!,
                                   onResolved: () {
                                     setState(() => _selectedFlag = null);
-                                    ref.invalidate(openFlagsProvider);
                                   },
                                 ),
                         ),
@@ -98,8 +106,46 @@ class _FlagDetailPanel extends ConsumerWidget {
     required this.onResolved,
   });
 
+  Future<void> _resolve(
+      BuildContext context, WidgetRef ref, String resolution) async {
+    final labels = {
+      'approved': 'approved',
+      'corrected': 'marked for correction',
+      'dismissed': 'dismissed',
+    };
+    try {
+      await AdminFirebaseService()
+          .resolveFlag(transaction.txnId, resolution);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Flag ${labels[resolution] ?? resolution}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        onResolved();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hasImage = transaction.receiptStoragePath != null;
+    final imageUrlAsync = hasImage
+        ? ref.watch(receiptDownloadUrlProvider(transaction.receiptStoragePath!))
+        : null;
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -116,47 +162,57 @@ class _FlagDetailPanel extends ConsumerWidget {
           Text('Amount: ${CurrencyFormatter.format(transaction.amount, transaction.currency)}'),
           Text('Date: ${DateFormatter.formatDate(transaction.date)}'),
           Text('Category: ${transaction.category}'),
-          Text(
-            'OCR Confidence: ${((transaction.ocrConfidence ?? 0) * 100).toStringAsFixed(0)}%',
-          ),
+          const SizedBox(height: 4),
+          _ConfidenceChip(confidence: transaction.ocrConfidence ?? 0),
           const SizedBox(height: 16),
+          // Receipt image
+          if (hasImage)
+            SizedBox(
+              height: 180,
+              child: imageUrlAsync!.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (url) => ReceiptImageViewer(imageUrl: url),
+              ),
+            ),
+          if (hasImage) const SizedBox(height: 16),
           if (transaction.ocrRawText != null) ...[
             Text(
               'Raw OCR Text:',
               style: Theme.of(context).textTheme.labelMedium,
             ),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                transaction.ocrRawText!,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    transaction.ocrRawText!,
+                    style:
+                        const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  ),
+                ),
               ),
             ),
-          ],
-          const Spacer(),
+          ] else
+            const Spacer(),
+          const SizedBox(height: 16),
           Row(
             children: [
               FilledButton.icon(
-                onPressed: () async {
-                  await AdminFirebaseService()
-                      .resolveFlag(transaction.txnId, 'approved');
-                  onResolved();
-                },
+                onPressed: () => _resolve(context, ref, 'approved'),
                 icon: const Icon(Icons.check),
                 label: const Text('Approve'),
               ),
               const SizedBox(width: 12),
               OutlinedButton.icon(
-                onPressed: () async {
-                  await AdminFirebaseService()
-                      .resolveFlag(transaction.txnId, 'corrected');
-                  onResolved();
-                },
+                onPressed: () => _resolve(context, ref, 'corrected'),
                 icon: const Icon(Icons.edit),
                 label: const Text('Correct'),
               ),
@@ -165,11 +221,7 @@ class _FlagDetailPanel extends ConsumerWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
                 ),
-                onPressed: () async {
-                  await AdminFirebaseService()
-                      .resolveFlag(transaction.txnId, 'dismissed');
-                  onResolved();
-                },
+                onPressed: () => _resolve(context, ref, 'dismissed'),
                 icon: const Icon(Icons.close),
                 label: const Text('Dismiss'),
               ),
@@ -177,6 +229,49 @@ class _FlagDetailPanel extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ConfidenceChip extends StatelessWidget {
+  final double confidence;
+  const _ConfidenceChip({required this.confidence});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = confidence >= 0.7
+        ? Colors.green
+        : confidence >= 0.5
+            ? Colors.orange
+            : Colors.red;
+    final label = confidence >= 0.7
+        ? 'High confidence'
+        : confidence >= 0.5
+            ? 'Medium confidence'
+            : 'Low confidence';
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.4)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.analytics_outlined, size: 13, color: color),
+              const SizedBox(width: 4),
+              Text(
+                '$label · ${(confidence * 100).toStringAsFixed(0)}%',
+                style: TextStyle(
+                    fontSize: 12, color: color, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -840,14 +840,76 @@ class _TopVendorsCard extends ConsumerWidget {
 
 // ── Day-of-week chart ─────────────────────────────────────────────────────────
 
-class _DayOfWeekCard extends StatelessWidget {
+class _DayOfWeekCard extends ConsumerWidget {
   final Map<int, double> data;
   const _DayOfWeekCard({required this.data});
 
   static const _days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+  void _onBarTap(BuildContext context, WidgetRef ref, int weekday) {
+    final txns = ref.read(reportTransactionsProvider);
+    final dayTxns = txns.where((t) => t.date.weekday == weekday).toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    if (dayTxns.isEmpty) return;
+    final dayName = _days[weekday - 1];
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (_, controller) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                children: [
+                  Text(
+                    dayName,
+                    style: Theme.of(ctx)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${dayTxns.length} transaction${dayTxns.length == 1 ? '' : 's'}',
+                    style:
+                        TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView.builder(
+                controller: controller,
+                itemCount: dayTxns.length,
+                itemBuilder: (_, i) {
+                  final t = dayTxns[i];
+                  return ListTile(
+                    title: Text(t.vendor),
+                    subtitle: Text(DateFormatter.formatDate(t.date)),
+                    trailing: Text(
+                      CurrencyFormatter.format(t.amountZAR, 'ZAR'),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    onTap: () => showTransactionDetail(ctx, t),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final maxVal = data.values.fold(0.0, max);
 
     return Card(
@@ -865,7 +927,7 @@ class _DayOfWeekCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Average spend per day over this period',
+              'Tap a bar to see transactions — avg spend per day',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey.shade600,
                   ),
@@ -884,57 +946,62 @@ class _DayOfWeekCard extends StatelessWidget {
                   final isMax = amount > 0 && amount == maxVal;
 
                   return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 3),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          if (isMax && amount > 0) ...[
-                            Text(
-                              CurrencyFormatter.format(amount, 'ZAR'),
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.bold,
+                    child: GestureDetector(
+                      onTap: amount > 0
+                          ? () => _onBarTap(context, ref, weekday)
+                          : null,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (isMax && amount > 0) ...[
+                              Text(
+                                CurrencyFormatter.format(amount, 'ZAR'),
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
+                              const SizedBox(height: 2),
+                            ] else
+                              const SizedBox(height: 13),
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeOut,
+                              height: barH,
+                              decoration: BoxDecoration(
+                                color: isMax
+                                    ? Theme.of(context).colorScheme.primary
+                                    : isWeekend
+                                        ? Theme.of(context)
+                                            .colorScheme
+                                            .secondaryContainer
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .primaryContainer,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
                             ),
-                            const SizedBox(height: 2),
-                          ] else
-                            const SizedBox(height: 13),
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 500),
-                            curve: Curves.easeOut,
-                            height: barH,
-                            decoration: BoxDecoration(
-                              color: isMax
-                                  ? Theme.of(context).colorScheme.primary
-                                  : isWeekend
-                                      ? Theme.of(context)
-                                          .colorScheme
-                                          .secondaryContainer
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .primaryContainer,
-                              borderRadius: BorderRadius.circular(4),
+                            const SizedBox(height: 4),
+                            Text(
+                              _days[i],
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: isMax
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.grey.shade500,
+                                fontWeight: isMax
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _days[i],
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: isMax
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Colors.grey.shade500,
-                              fontWeight: isMax
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   );

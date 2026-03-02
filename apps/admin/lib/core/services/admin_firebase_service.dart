@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../providers/analytics_provider.dart';
 
@@ -52,6 +53,25 @@ class AdminFirebaseService {
     return snapshot.docs
         .map((doc) => TransactionModel.fromMap(doc.data()))
         .toList();
+  }
+
+  Stream<List<TransactionModel>> streamOpenFlags({int limit = 50}) {
+    return _firestore
+        .collection('admin_flags')
+        .where('status', isEqualTo: 'open')
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((snap) =>
+            snap.docs.map((doc) => TransactionModel.fromMap(doc.data())).toList());
+  }
+
+  Future<String?> getReceiptDownloadUrl(String storagePath) async {
+    try {
+      return await FirebaseStorage.instance.ref(storagePath).getDownloadURL();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> updateUserPlan(String uid, String plan) async {

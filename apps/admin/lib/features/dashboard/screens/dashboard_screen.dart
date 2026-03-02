@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/providers/analytics_provider.dart';
 import '../../../core/providers/flags_provider.dart';
 import '../../../shared/widgets/admin_sidebar.dart';
@@ -112,6 +113,9 @@ class DashboardScreen extends ConsumerWidget {
                                   subtitle: Text(
                                     'Confidence: ${((flag.ocrConfidence ?? 0) * 100).toStringAsFixed(0)}%',
                                   ),
+                                  trailing: const Icon(
+                                      Icons.chevron_right, size: 18),
+                                  onTap: () => context.go('/ocr-review'),
                                 );
                               }).toList(),
                             );
