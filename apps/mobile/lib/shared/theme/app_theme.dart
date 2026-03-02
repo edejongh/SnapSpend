@@ -9,7 +9,6 @@ class AppTheme {
       primary: AppColors.primary,
       secondary: AppColors.accent,
       error: AppColors.error,
-      background: AppColors.background,
       surface: AppColors.surface,
     );
     return ThemeData(

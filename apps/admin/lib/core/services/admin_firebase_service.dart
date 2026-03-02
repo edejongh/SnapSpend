@@ -67,6 +67,8 @@ class AdminFirebaseService {
   }
 
   Future<String?> getReceiptDownloadUrl(String storagePath) async {
+    // Support legacy receipts that stored a download URL directly.
+    if (storagePath.startsWith('https://')) return storagePath;
     try {
       return await FirebaseStorage.instance.ref(storagePath).getDownloadURL();
     } catch (_) {
