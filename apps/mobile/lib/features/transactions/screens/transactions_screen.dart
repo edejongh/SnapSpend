@@ -740,6 +740,8 @@ class TransactionsScreen extends ConsumerWidget {
               child: const Text('Cancel')),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error),
               child: const Text('Delete')),
         ],
       ),
@@ -1146,6 +1148,12 @@ class _TransactionTile extends ConsumerWidget {
             CurrencyFormatter.format(transaction.amountZAR, 'ZAR'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           ),
+          if (transaction.currency != 'ZAR')
+            Text(
+              CurrencyFormatter.format(
+                  transaction.amount, transaction.currency),
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+            ),
           if (transaction.isTaxDeductible)
             const Text(
               'Tax deductible',

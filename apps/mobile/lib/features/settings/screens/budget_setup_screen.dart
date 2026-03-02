@@ -162,6 +162,9 @@ class _BudgetTile extends ConsumerWidget {
                       child: const Text('Cancel')),
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
+                      style: TextButton.styleFrom(
+                          foregroundColor:
+                              Theme.of(context).colorScheme.error),
                       child: const Text('Delete')),
                 ],
               ),
