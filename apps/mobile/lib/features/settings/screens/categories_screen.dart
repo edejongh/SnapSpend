@@ -88,7 +88,7 @@ class CategoriesScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _CategorySheet(existing: existing, ref: ref),
+      builder: (_) => _CategorySheet(existing: existing),
     );
   }
 
@@ -231,16 +231,15 @@ class _CategoryTile extends StatelessWidget {
 
 // ── Add / Edit sheet ──────────────────────────────────────────────────────────
 
-class _CategorySheet extends StatefulWidget {
+class _CategorySheet extends ConsumerStatefulWidget {
   final CategoryModel? existing;
-  final WidgetRef ref;
-  const _CategorySheet({required this.existing, required this.ref});
+  const _CategorySheet({this.existing});
 
   @override
-  State<_CategorySheet> createState() => _CategorySheetState();
+  ConsumerState<_CategorySheet> createState() => _CategorySheetState();
 }
 
-class _CategorySheetState extends State<_CategorySheet> {
+class _CategorySheetState extends ConsumerState<_CategorySheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
   late final TextEditingController _iconCtrl;
@@ -265,6 +264,14 @@ class _CategorySheetState extends State<_CategorySheet> {
     super.dispose();
   }
 
+  Color get _previewColor {
+    try {
+      return Color(int.parse(_selectedColor.replaceFirst('#', '0xFF')));
+    } catch (_) {
+      return Colors.grey;
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -277,15 +284,18 @@ class _CategorySheetState extends State<_CategorySheet> {
       isDefault: false,
       taxDeductibleByDefault: _taxDeductible,
     );
-    await widget.ref
-        .read(categoryNotifierProvider.notifier)
-        .saveCategory(cat);
+    await ref.read(categoryNotifierProvider.notifier).saveCategory(cat);
     if (mounted) Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.existing != null;
+    final previewIcon =
+        _iconCtrl.text.trim().isEmpty ? '📋' : _iconCtrl.text.trim();
+    final previewName =
+        _nameCtrl.text.trim().isEmpty ? 'Preview' : _nameCtrl.text.trim();
+
     return Padding(
       padding: EdgeInsets.fromLTRB(
         24,
@@ -311,12 +321,36 @@ class _CategorySheetState extends State<_CategorySheet> {
                 ),
               ),
             ),
-            Text(
-              isEditing ? 'Edit Category' : 'New Category',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                Text(
+                  isEditing ? 'Edit Category' : 'New Category',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                // Live preview
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: _previewColor,
+                      child: Text(previewIcon,
+                          style: const TextStyle(fontSize: 16)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      previewName,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             Row(
@@ -331,6 +365,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 24),
                     maxLength: 2,
+                    onChanged: (_) => setState(() {}),
                     buildCounter: (_, {required currentLength,
                       required isFocused, maxLength}) => null,
                   ),
@@ -341,6 +376,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                     controller: _nameCtrl,
                     decoration: const InputDecoration(labelText: 'Name'),
                     textCapitalization: TextCapitalization.words,
+                    onChanged: (_) => setState(() {}),
                     validator: (v) => (v == null || v.trim().isEmpty)
                         ? 'Name is required'
                         : null,
