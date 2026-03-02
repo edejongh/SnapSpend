@@ -396,16 +396,11 @@ class _SyncTile extends ConsumerWidget {
     final uid = ref.watch(authStateProvider).asData?.value?.uid;
     final isSyncing = syncStatus == SyncStatus.syncing;
 
-    String subtitle;
-    switch (syncStatus) {
-      case SyncStatus.syncing:
-        subtitle = 'Syncing…';
-      case SyncStatus.error:
-        subtitle = 'Last sync failed — tap to retry';
-      case SyncStatus.idle:
-      default:
-        subtitle = 'All changes saved';
-    }
+    final subtitle = switch (syncStatus) {
+      SyncStatus.syncing => 'Syncing…',
+      SyncStatus.error => 'Last sync failed — tap to retry',
+      _ => 'All changes saved',
+    };
 
     return ListTile(
       leading: isSyncing
