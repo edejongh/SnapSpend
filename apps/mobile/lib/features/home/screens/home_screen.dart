@@ -563,33 +563,49 @@ class _AlertRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isOver = utilisation >= 1.0;
     final pctText = '${(utilisation * 100).toStringAsFixed(0)}%';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: isOver ? Colors.red.shade50 : Colors.amber.shade50,
-        border: Border.all(
-            color: isOver ? Colors.red.shade300 : Colors.amber.shade300),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isOver ? Icons.cancel_outlined : Icons.warning_amber,
-            color: isOver ? Colors.red.shade700 : Colors.amber.shade700,
-            size: 20,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              isOver
-                  ? '${budget.name} is over budget ($pctText)'
-                  : '${budget.name} is at $pctText of limit',
-              style: TextStyle(
-                color: isOver ? Colors.red.shade900 : Colors.amber.shade900,
+    return GestureDetector(
+      onTap: () {
+        final router = GoRouter.of(context);
+        Navigator.of(context).pop();
+        if (budget.categoryId != null) {
+          router.go('/transactions', extra: budget.categoryId);
+        } else {
+          router.go('/transactions?range=this_month');
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isOver ? Colors.red.shade50 : Colors.amber.shade50,
+          border: Border.all(
+              color: isOver ? Colors.red.shade300 : Colors.amber.shade300),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isOver ? Icons.cancel_outlined : Icons.warning_amber,
+              color: isOver ? Colors.red.shade700 : Colors.amber.shade700,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                isOver
+                    ? '${budget.name} is over budget ($pctText)'
+                    : '${budget.name} is at $pctText of limit',
+                style: TextStyle(
+                  color: isOver ? Colors.red.shade900 : Colors.amber.shade900,
+                ),
               ),
             ),
-          ),
-        ],
+            Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: isOver ? Colors.red.shade400 : Colors.amber.shade600,
+            ),
+          ],
+        ),
       ),
     );
   }
