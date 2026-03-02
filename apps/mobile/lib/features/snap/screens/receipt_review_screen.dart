@@ -50,6 +50,8 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
   String _vendorText = '';
   /// Whether the category was manually set by the user (suppresses suggestions).
   bool _categoryManuallySet = false;
+  /// Whether tax deductible was manually toggled by the user.
+  bool _taxManuallySet = false;
 
   bool get _isEditing => widget.existingTransaction != null;
 
@@ -90,7 +92,16 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
       _selectedCurrency = profileCurrency;
       _selectedCategory = ocr?.suggestedCategory;
       _selectedDate = ocr?.extractedDate ?? DateTime.now();
-      _isTaxDeductible = false;
+      // Auto-apply tax default from the OCR-suggested category
+      final initCatId = ocr?.suggestedCategory;
+      final initCat = initCatId != null
+          ? ref
+              .read(categoriesProvider)
+              .cast<CategoryModel?>()
+              .firstWhere((c) => c?.categoryId == initCatId,
+                  orElse: () => null)
+          : null;
+      _isTaxDeductible = initCat?.taxDeductibleByDefault ?? false;
     }
     _vendorText = _vendorCtrl.text;
     _vendorCtrl.addListener(() {
@@ -302,11 +313,19 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
               vendor: _vendorText,
               currentCategory: _selectedCategory,
               categoryManuallySet: _categoryManuallySet,
-              onAccept: (catId) =>
-                  setState(() {
-                    _selectedCategory = catId;
-                    _categoryManuallySet = true;
-                  }),
+              onAccept: (catId) {
+                final cat = categories
+                    .cast<CategoryModel?>()
+                    .firstWhere((c) => c?.categoryId == catId,
+                        orElse: () => null);
+                setState(() {
+                  _selectedCategory = catId;
+                  _categoryManuallySet = true;
+                  if (!_isEditing && !_taxManuallySet && cat != null) {
+                    _isTaxDeductible = cat.taxDeductibleByDefault;
+                  }
+                });
+              },
             ),
             const SizedBox(height: 12),
             // Date picker
@@ -337,10 +356,19 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                     ),
                   )
                   .toList(),
-              onChanged: (v) => setState(() {
-                _selectedCategory = v;
-                _categoryManuallySet = true;
-              }),
+              onChanged: (v) {
+                final cat = categories
+                    .cast<CategoryModel?>()
+                    .firstWhere((c) => c?.categoryId == v,
+                        orElse: () => null);
+                setState(() {
+                  _selectedCategory = v;
+                  _categoryManuallySet = true;
+                  if (!_isEditing && !_taxManuallySet && cat != null) {
+                    _isTaxDeductible = cat.taxDeductibleByDefault;
+                  }
+                });
+              },
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -356,7 +384,10 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Tax Deductible'),
               value: _isTaxDeductible,
-              onChanged: (v) => setState(() => _isTaxDeductible = v),
+              onChanged: (v) => setState(() {
+                _isTaxDeductible = v;
+                _taxManuallySet = true;
+              }),
             ),
             const SizedBox(height: 24),
             PrimaryButton(
