@@ -549,7 +549,7 @@ class _CategoryBreakdown extends ConsumerWidget {
   }
 }
 
-class _TaxSummaryCard extends ConsumerWidget {
+class _TaxSummaryCard extends ConsumerStatefulWidget {
   final double total;
   final List<TransactionModel> transactions;
 
@@ -558,17 +558,24 @@ class _TaxSummaryCard extends ConsumerWidget {
     required this.transactions,
   });
 
-  Future<void> _exportTax(
-      BuildContext context, WidgetRef ref) async {
+  @override
+  ConsumerState<_TaxSummaryCard> createState() => _TaxSummaryCardState();
+}
+
+class _TaxSummaryCardState extends ConsumerState<_TaxSummaryCard> {
+  bool _showAll = false;
+
+  static const _previewCount = 5;
+
+  Future<void> _exportTax(BuildContext context) async {
     final categories = ref.read(categoriesProvider);
     final catById = {for (final c in categories) c.categoryId: c};
     final period =
         ref.read(reportPeriodProvider).replaceAll(' ', '_');
 
     final buffer = StringBuffer();
-    buffer.writeln(
-        'Date,Vendor,Category,Amount (ZAR),Note');
-    for (final t in transactions) {
+    buffer.writeln('Date,Vendor,Category,Amount (ZAR),Note');
+    for (final t in widget.transactions) {
       final catName = catById[t.category]?.name ?? t.category;
       final note = (t.note ?? '').replaceAll(',', ';');
       buffer.writeln(
@@ -593,7 +600,12 @@ class _TaxSummaryCard extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final shown = _showAll
+        ? widget.transactions
+        : widget.transactions.take(_previewCount).toList();
+    final hasMore = widget.transactions.length > _previewCount;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -614,7 +626,7 @@ class _TaxSummaryCard extends ConsumerWidget {
                 ),
                 const Spacer(),
                 Text(
-                  CurrencyFormatter.format(total, 'ZAR'),
+                  CurrencyFormatter.format(widget.total, 'ZAR'),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Colors.green,
@@ -626,12 +638,12 @@ class _TaxSummaryCard extends ConsumerWidget {
                       size: 18, color: Colors.green),
                   tooltip: 'Export tax report',
                   visualDensity: VisualDensity.compact,
-                  onPressed: () => _exportTax(context, ref),
+                  onPressed: () => _exportTax(context),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            ...transactions.map((t) {
+            ...shown.map((t) {
               final category = ref.watch(categoryByIdProvider(t.category));
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -663,6 +675,21 @@ class _TaxSummaryCard extends ConsumerWidget {
                 ),
               );
             }),
+            if (hasMore && !_showAll)
+              GestureDetector(
+                onTap: () => setState(() => _showAll = true),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Show all (${widget.transactions.length})',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -809,7 +836,7 @@ class _DayOfWeekCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             SizedBox(
-              height: 80,
+              height: 95,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: List.generate(7, (i) {
@@ -826,6 +853,21 @@ class _DayOfWeekCard extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
+                          if (isMax && amount > 0) ...[
+                            Text(
+                              CurrencyFormatter.format(amount, 'ZAR'),
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                            ),
+                            const SizedBox(height: 2),
+                          ] else
+                            const SizedBox(height: 13),
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 500),
                             curve: Curves.easeOut,
