@@ -232,6 +232,60 @@ class SpendingInsightsCard extends ConsumerWidget {
       }
     }
 
+    // New vendor this month — first time ever seeing this merchant
+    {
+      final now = DateTime.now();
+      final thisMonthTxns = allTxns
+          .where((t) => t.date.year == now.year && t.date.month == now.month)
+          .toList();
+      if (thisMonthTxns.length >= 3) {
+        final prevVendors = allTxns
+            .where((t) =>
+                !(t.date.year == now.year && t.date.month == now.month))
+            .map((t) => t.vendor)
+            .toSet();
+        final newVendorTotals = <String, double>{};
+        for (final t in thisMonthTxns) {
+          if (!prevVendors.contains(t.vendor)) {
+            newVendorTotals[t.vendor] =
+                (newVendorTotals[t.vendor] ?? 0.0) + t.amountZAR;
+          }
+        }
+        if (newVendorTotals.isNotEmpty) {
+          final top = newVendorTotals.entries
+              .reduce((a, b) => a.value >= b.value ? a : b);
+          insights.add(_Insight(
+            icon: Icons.new_releases_outlined,
+            color: Colors.teal.shade600,
+            text:
+                'New this month: ${top.key} — ${CurrencyFormatter.format(top.value, 'ZAR')}',
+            onTap: () => context.go(
+              '/transactions?search=${Uri.encodeComponent(top.key)}',
+            ),
+          ));
+        }
+      }
+    }
+
+    // Tax-deductible spend summary (when >= R 500 this month)
+    {
+      final now = DateTime.now();
+      final taxSpend = allTxns
+          .where((t) =>
+              t.date.year == now.year &&
+              t.date.month == now.month &&
+              t.isTaxDeductible)
+          .fold(0.0, (s, t) => s + t.amountZAR);
+      if (taxSpend >= 500) {
+        insights.add(_Insight(
+          icon: Icons.receipt_long_outlined,
+          color: Colors.teal.shade700,
+          text:
+              '${CurrencyFormatter.format(taxSpend, 'ZAR')} tax-deductible this month',
+        ));
+      }
+    }
+
     // Nudge to set up a budget if none exist but there are transactions
     if (budgets.isEmpty && monthlySpend > 0) {
       insights.add(_Insight(
