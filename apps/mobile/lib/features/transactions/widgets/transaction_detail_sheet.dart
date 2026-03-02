@@ -205,10 +205,12 @@ class TransactionDetailSheet extends ConsumerWidget {
     final allTxns = ref.watch(transactionsProvider).asData?.value ?? [];
     final vendorTxns = allTxns
         .where((tx) => tx.vendor == t.vendor && tx.txnId != t.txnId)
-        .toList();
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
     final vendorTotal = vendorTxns.fold(0.0, (s, tx) => s + tx.amountZAR);
     final vendorAvg =
         vendorTxns.isEmpty ? null : vendorTotal / vendorTxns.length;
+    final recentVisits = vendorTxns.take(3).toList();
 
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
@@ -405,6 +407,27 @@ class TransactionDetailSheet extends ConsumerWidget {
                   value: CurrencyFormatter.format(
                       (vendorTotal + t.amountZAR) / (vendorTxns.length + 1),
                       'ZAR')),
+            const SizedBox(height: 10),
+            // Last 3 visits (excluding current transaction)
+            for (final tx in recentVisits)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  children: [
+                    Text(
+                      DateFormatter.formatDate(tx.date),
+                      style: TextStyle(
+                          fontSize: 13, color: Colors.grey.shade600),
+                    ),
+                    const Spacer(),
+                    Text(
+                      CurrencyFormatter.format(tx.amountZAR, 'ZAR'),
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
           ],
           if (t.flaggedForReview)
             Container(

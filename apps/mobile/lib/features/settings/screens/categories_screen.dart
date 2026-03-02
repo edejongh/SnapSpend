@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/providers/category_provider.dart';
@@ -40,6 +41,10 @@ class CategoriesScreen extends ConsumerWidget {
                 onEdit: null,
                 onDelete: null,
                 spend: spendByCategory[cat.categoryId],
+                onTap: spendByCategory.containsKey(cat.categoryId)
+                    ? () => context.push('/transactions',
+                        extra: cat.categoryId)
+                    : null,
               ),
             const Divider(),
             _SectionHeader(label: 'My categories'),
@@ -61,6 +66,10 @@ class CategoriesScreen extends ConsumerWidget {
                   onEdit: () => _showCategorySheet(context, ref, cat),
                   onDelete: () => _confirmDelete(context, ref, cat),
                   spend: spendByCategory[cat.categoryId],
+                  onTap: spendByCategory.containsKey(cat.categoryId)
+                      ? () => context.push('/transactions',
+                          extra: cat.categoryId)
+                      : null,
                 ),
             // Bottom padding for FAB
             const SizedBox(height: 80),
@@ -143,6 +152,7 @@ class _CategoryTile extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final double? spend;
+  final VoidCallback? onTap;
 
   const _CategoryTile({
     required this.category,
@@ -150,6 +160,7 @@ class _CategoryTile extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     this.spend,
+    this.onTap,
   });
 
   @override
@@ -182,6 +193,7 @@ class _CategoryTile extends StatelessWidget {
     }
 
     return ListTile(
+      onTap: onTap,
       leading: CircleAvatar(
         backgroundColor: _hexColor(category.color),
         child: Text(category.icon, style: const TextStyle(fontSize: 18)),
