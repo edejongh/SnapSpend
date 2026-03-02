@@ -672,13 +672,15 @@ class _TaxSummaryCard extends ConsumerWidget {
 
 // ── Top vendors ───────────────────────────────────────────────────────────────
 
-class _TopVendorsCard extends StatelessWidget {
+class _TopVendorsCard extends ConsumerWidget {
   final List<MapEntry<String, double>> vendors;
   final double total;
   const _TopVendorsCard({required this.vendors, required this.total});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vendorCounts = ref.watch(reportVendorCountsProvider);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -711,11 +713,25 @@ class _TopVendorsCard extends StatelessWidget {
                           mainAxisAlignment:
                               MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              entry.key,
-                              style:
-                                  Theme.of(context).textTheme.bodyMedium,
-                              overflow: TextOverflow.ellipsis,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    entry.key,
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if ((vendorCounts[entry.key] ?? 0) > 1)
+                                    Text(
+                                      '${vendorCounts[entry.key]} visits',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                             Row(
                               children: [

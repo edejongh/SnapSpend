@@ -171,6 +171,16 @@ final reportTopVendorsProvider =
   return sorted.take(5).toList();
 });
 
+/// Visit count per vendor in the selected period.
+final reportVendorCountsProvider = Provider<Map<String, int>>((ref) {
+  final txns = ref.watch(reportTransactionsProvider);
+  final counts = <String, int>{};
+  for (final t in txns) {
+    counts[t.vendor] = (counts[t.vendor] ?? 0) + 1;
+  }
+  return counts;
+});
+
 /// Total tax-deductible spend in the selected period.
 final reportTaxDeductibleProvider = Provider<double>((ref) {
   return ref
