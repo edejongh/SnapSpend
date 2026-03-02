@@ -209,6 +209,26 @@ class TransactionsScreen extends ConsumerWidget {
               ),
               title: Text('${selectedIds.length} selected'),
               actions: [
+                if (txnsAsync.asData != null)
+                  IconButton(
+                    icon: const Icon(Icons.select_all),
+                    tooltip: 'Select all',
+                    onPressed: () {
+                      final filtered = _filterTxns(
+                        txnsAsync.asData!.value,
+                        query: query,
+                        categoryFilter: categoryFilter,
+                        dateRange: dateRange,
+                        amountRange: amountRange,
+                        taxOnly: taxOnly,
+                        flaggedOnly: flaggedOnly,
+                      );
+                      ref
+                          .read(_selectedTxnIdsProvider.notifier)
+                          .state =
+                          filtered.map((t) => t.txnId).toSet();
+                    },
+                  ),
                 if (selectedIds.isNotEmpty) ...[
                   IconButton(
                     icon: const Icon(Icons.download_outlined),
@@ -420,74 +440,15 @@ class TransactionsScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (allTxns) {
-          var txns = categoryFilter == null
-              ? allTxns
-              : allTxns
-                  .where((t) => t.category == categoryFilter)
-                  .toList();
-
-          // Apply date range filter
-          if (dateRange != _TxnDateRange.all) {
-            final now = DateTime.now();
-            final DateTime from;
-            final DateTime? to;
-            switch (dateRange) {
-              case _TxnDateRange.today:
-                from = DateTime(now.year, now.month, now.day);
-                to = null;
-              case _TxnDateRange.thisWeek:
-                final monday = now.subtract(Duration(days: now.weekday - 1));
-                from = DateTime(monday.year, monday.month, monday.day);
-                to = null;
-              case _TxnDateRange.thisMonth:
-                from = DateTime(now.year, now.month);
-                to = null;
-              case _TxnDateRange.lastMonth:
-                from = DateTime(now.year, now.month - 1);
-                to = DateTime(now.year, now.month);
-              case _TxnDateRange.last30Days:
-                from = now.subtract(const Duration(days: 30));
-                to = null;
-              case _TxnDateRange.last7Days:
-                from = now.subtract(const Duration(days: 7));
-                to = null;
-              case _TxnDateRange.all:
-                from = DateTime(2000);
-                to = null;
-            }
-            txns = txns
-                .where((t) =>
-                    !t.date.isBefore(from) &&
-                    (to == null || t.date.isBefore(to)))
-                .toList();
-          }
-
-          if (taxOnly) {
-            txns = txns.where((t) => t.isTaxDeductible).toList();
-          }
-
-          if (flaggedOnly) {
-            txns = txns.where((t) => t.flaggedForReview).toList();
-          }
-
-          if (amountRange.$1 != null || amountRange.$2 != null) {
-            txns = txns.where((t) {
-              if (amountRange.$1 != null && t.amountZAR < amountRange.$1!)
-                return false;
-              if (amountRange.$2 != null && t.amountZAR > amountRange.$2!)
-                return false;
-              return true;
-            }).toList();
-          }
-
-          if (query.isNotEmpty) {
-            txns = txns.where((t) {
-              return t.vendor.toLowerCase().contains(query) ||
-                  t.category.toLowerCase().contains(query) ||
-                  (t.note?.toLowerCase().contains(query) ?? false) ||
-                  (t.ocrRawText?.toLowerCase().contains(query) ?? false);
-            }).toList();
-          }
+          var txns = _filterTxns(
+            allTxns,
+            query: query,
+            categoryFilter: categoryFilter,
+            dateRange: dateRange,
+            amountRange: amountRange,
+            taxOnly: taxOnly,
+            flaggedOnly: flaggedOnly,
+          );
 
           // Apply sort
           txns = List.of(txns);
@@ -704,6 +665,78 @@ class TransactionsScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  static List<TransactionModel> _filterTxns(
+    List<TransactionModel> all, {
+    required String query,
+    required String? categoryFilter,
+    required _TxnDateRange dateRange,
+    required (double?, double?) amountRange,
+    required bool taxOnly,
+    required bool flaggedOnly,
+  }) {
+    var txns = categoryFilter == null
+        ? all
+        : all.where((t) => t.category == categoryFilter).toList();
+
+    if (dateRange != _TxnDateRange.all) {
+      final now = DateTime.now();
+      final DateTime from;
+      final DateTime? to;
+      switch (dateRange) {
+        case _TxnDateRange.today:
+          from = DateTime(now.year, now.month, now.day);
+          to = null;
+        case _TxnDateRange.thisWeek:
+          final monday = now.subtract(Duration(days: now.weekday - 1));
+          from = DateTime(monday.year, monday.month, monday.day);
+          to = null;
+        case _TxnDateRange.thisMonth:
+          from = DateTime(now.year, now.month);
+          to = null;
+        case _TxnDateRange.lastMonth:
+          from = DateTime(now.year, now.month - 1);
+          to = DateTime(now.year, now.month);
+        case _TxnDateRange.last30Days:
+          from = now.subtract(const Duration(days: 30));
+          to = null;
+        case _TxnDateRange.last7Days:
+          from = now.subtract(const Duration(days: 7));
+          to = null;
+        case _TxnDateRange.all:
+          from = DateTime(2000);
+          to = null;
+      }
+      txns = txns
+          .where((t) =>
+              !t.date.isBefore(from) && (to == null || t.date.isBefore(to)))
+          .toList();
+    }
+
+    if (taxOnly) txns = txns.where((t) => t.isTaxDeductible).toList();
+    if (flaggedOnly) txns = txns.where((t) => t.flaggedForReview).toList();
+
+    if (amountRange.$1 != null || amountRange.$2 != null) {
+      txns = txns.where((t) {
+        if (amountRange.$1 != null && t.amountZAR < amountRange.$1!)
+          return false;
+        if (amountRange.$2 != null && t.amountZAR > amountRange.$2!)
+          return false;
+        return true;
+      }).toList();
+    }
+
+    if (query.isNotEmpty) {
+      txns = txns.where((t) {
+        return t.vendor.toLowerCase().contains(query) ||
+            t.category.toLowerCase().contains(query) ||
+            (t.note?.toLowerCase().contains(query) ?? false) ||
+            (t.ocrRawText?.toLowerCase().contains(query) ?? false);
+      }).toList();
+    }
+
+    return txns;
   }
 
   String _dateKey(DateTime date) {
