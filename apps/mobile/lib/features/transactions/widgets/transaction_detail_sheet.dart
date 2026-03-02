@@ -410,22 +410,29 @@ class TransactionDetailSheet extends ConsumerWidget {
             const SizedBox(height: 10),
             // Last 3 visits (excluding current transaction)
             for (final tx in recentVisits)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  children: [
-                    Text(
-                      DateFormatter.formatDate(tx.date),
-                      style: TextStyle(
-                          fontSize: 13, color: Colors.grey.shade600),
-                    ),
-                    const Spacer(),
-                    Text(
-                      CurrencyFormatter.format(tx.amountZAR, 'ZAR'),
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w500),
-                    ),
-                  ],
+              InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => showTransactionDetail(context, tx),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    children: [
+                      Text(
+                        DateFormatter.formatDate(tx.date),
+                        style: TextStyle(
+                            fontSize: 13, color: Colors.grey.shade600),
+                      ),
+                      const Spacer(),
+                      Text(
+                        CurrencyFormatter.format(tx.amountZAR, 'ZAR'),
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.chevron_right,
+                          size: 14, color: Colors.grey.shade400),
+                    ],
+                  ),
                 ),
               ),
           ],
