@@ -384,7 +384,19 @@ class _AllInsightsSheet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           for (int i = 0; i < insights.length; i++) ...[
-            _InsightRow(insight: insights[i]),
+            _InsightRow(
+              insight: insights[i].onTap == null
+                  ? insights[i]
+                  : _Insight(
+                      icon: insights[i].icon,
+                      color: insights[i].color,
+                      text: insights[i].text,
+                      onTap: () {
+                        Navigator.pop(context);
+                        insights[i].onTap!();
+                      },
+                    ),
+            ),
             if (i < insights.length - 1) ...[
               const SizedBox(height: 4),
               const Divider(height: 16),
