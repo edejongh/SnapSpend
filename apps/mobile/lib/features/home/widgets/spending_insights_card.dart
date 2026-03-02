@@ -25,6 +25,8 @@ class SpendingInsightsCard extends ConsumerWidget {
     final categories = ref.watch(categoriesProvider);
     final skippedRecurring = ref.watch(skippedRecurringProvider);
     final peakDay = ref.watch(peakSpendDayProvider);
+    final streak = ref.watch(spendingStreakProvider);
+    final allTxns = ref.watch(transactionsProvider).asData?.value ?? [];
 
     final insights = <_Insight>[];
 
@@ -188,6 +190,46 @@ class SpendingInsightsCard extends ConsumerWidget {
           '/transactions?search=${Uri.encodeComponent(skippedRecurring.vendor)}',
         ),
       ));
+    }
+
+    // Streak milestone — celebrate at 7/14/30/60/90 consecutive days
+    const milestones = {7, 14, 30, 60, 90};
+    if (milestones.contains(streak)) {
+      insights.add(_Insight(
+        icon: Icons.local_fire_department,
+        color: Colors.deepOrange.shade600,
+        text: '🔥 $streak-day tracking streak — impressive!',
+      ));
+    }
+
+    // Weekend vs weekday spending pattern (last 30 days)
+    {
+      final cutoff = DateTime.now().subtract(const Duration(days: 30));
+      final recent = allTxns.where((t) => t.date.isAfter(cutoff)).toList();
+      if (recent.length >= 8) {
+        final weekendTxns = recent.where((t) => t.date.weekday >= 6);
+        final weekdayTxns = recent.where((t) => t.date.weekday <= 5);
+        final weekendDays = weekendTxns
+            .map((t) => DateTime(t.date.year, t.date.month, t.date.day))
+            .toSet();
+        final weekdayDays = weekdayTxns
+            .map((t) => DateTime(t.date.year, t.date.month, t.date.day))
+            .toSet();
+        if (weekendDays.isNotEmpty && weekdayDays.isNotEmpty) {
+          final weekendAvg = weekendTxns.fold(0.0, (s, t) => s + t.amountZAR) /
+              weekendDays.length;
+          final weekdayAvg = weekdayTxns.fold(0.0, (s, t) => s + t.amountZAR) /
+              weekdayDays.length;
+          if (weekdayAvg > 0 && weekendAvg > weekdayAvg * 1.5) {
+            final pct = ((weekendAvg / weekdayAvg - 1) * 100).round();
+            insights.add(_Insight(
+              icon: Icons.event_outlined,
+              color: Colors.blue.shade700,
+              text: 'Weekend spending is $pct% higher than weekdays (last 30 days)',
+            ));
+          }
+        }
+      }
     }
 
     // Nudge to set up a budget if none exist but there are transactions
