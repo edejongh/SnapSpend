@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:snapspend_core/snapspend_core.dart' show CurrencyFormatter;
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -382,6 +381,7 @@ class _LifetimeStatsSection extends ConsumerWidget {
     final txns = ref.watch(transactionsProvider).asData?.value ?? [];
     if (txns.isEmpty) return const SizedBox.shrink();
 
+    final streak = ref.watch(spendingStreakProvider);
     final total = txns.fold(0.0, (s, t) => s + t.amountZAR);
 
     // Average monthly spend (across distinct months that have data)
@@ -392,8 +392,13 @@ class _LifetimeStatsSection extends ConsumerWidget {
         ? 0.0
         : total / distinctMonths.length;
 
-    // Tax deductible total this calendar year
+    // Year-to-date total
     final thisYear = DateTime.now().year;
+    final ytdTotal = txns
+        .where((t) => t.date.year == thisYear)
+        .fold(0.0, (s, t) => s + t.amountZAR);
+
+    // Tax deductible total this calendar year
     final taxTotal = txns
         .where((t) => t.isTaxDeductible && t.date.year == thisYear)
         .fold(0.0, (s, t) => s + t.amountZAR);
@@ -445,11 +450,23 @@ class _LifetimeStatsSection extends ConsumerWidget {
           label: 'Total transactions',
           value: '${txns.length}',
         ),
+        if (ytdTotal > 0)
+          _StatRow(
+            icon: Icons.calendar_today_outlined,
+            label: '$thisYear so far',
+            value: CurrencyFormatter.format(ytdTotal, 'ZAR'),
+          ),
         _StatRow(
           icon: Icons.attach_money_outlined,
           label: 'Total tracked',
           value: CurrencyFormatter.format(total, 'ZAR'),
         ),
+        if (streak > 0)
+          _StatRow(
+            icon: Icons.local_fire_department_outlined,
+            label: 'Current streak',
+            value: '$streak day${streak == 1 ? '' : 's'} 🔥',
+          ),
         if (distinctMonths.length >= 2)
           _StatRow(
             icon: Icons.trending_flat_outlined,
