@@ -807,72 +807,15 @@ class TransactionsScreen extends ConsumerWidget {
 
   Future<void> _exportCsv(BuildContext context, WidgetRef ref) async {
     final allTxns = ref.read(transactionsProvider).asData?.value ?? [];
-    final categoryFilter = ref.read(_txnCategoryFilterProvider);
-    final dateRange = ref.read(_txnDateRangeProvider);
-    final query = ref.read(_txnSearchProvider).toLowerCase();
-    final amountRange = ref.read(_txnAmountRangeProvider);
-    final taxOnly = ref.read(_txnTaxFilterProvider);
-
-    var txns = categoryFilter == null
-        ? allTxns
-        : allTxns.where((t) => t.category == categoryFilter).toList();
-
-    if (dateRange != _TxnDateRange.all) {
-      final now = DateTime.now();
-      DateTime from;
-      DateTime? to;
-      switch (dateRange) {
-        case _TxnDateRange.today:
-          from = DateTime(now.year, now.month, now.day);
-          to = null;
-        case _TxnDateRange.thisWeek:
-          final monday = now.subtract(Duration(days: now.weekday - 1));
-          from = DateTime(monday.year, monday.month, monday.day);
-          to = null;
-        case _TxnDateRange.thisMonth:
-          from = DateTime(now.year, now.month);
-          to = null;
-        case _TxnDateRange.lastMonth:
-          from = DateTime(now.year, now.month - 1);
-          to = DateTime(now.year, now.month);
-        case _TxnDateRange.last30Days:
-          from = now.subtract(const Duration(days: 30));
-          to = null;
-        case _TxnDateRange.last7Days:
-          from = now.subtract(const Duration(days: 7));
-          to = null;
-        case _TxnDateRange.all:
-          from = DateTime(2000);
-          to = null;
-      }
-      txns = txns
-          .where((t) =>
-              !t.date.isBefore(from) && (to == null || t.date.isBefore(to)))
-          .toList();
-    }
-
-    if (taxOnly) {
-      txns = txns.where((t) => t.isTaxDeductible).toList();
-    }
-
-    if (amountRange.$1 != null || amountRange.$2 != null) {
-      txns = txns.where((t) {
-        if (amountRange.$1 != null && t.amountZAR < amountRange.$1!)
-          return false;
-        if (amountRange.$2 != null && t.amountZAR > amountRange.$2!)
-          return false;
-        return true;
-      }).toList();
-    }
-
-    if (query.isNotEmpty) {
-      txns = txns
-          .where((t) =>
-              t.vendor.toLowerCase().contains(query) ||
-              t.category.toLowerCase().contains(query) ||
-              (t.note?.toLowerCase().contains(query) ?? false))
-          .toList();
-    }
+    final txns = _filterTxns(
+      allTxns,
+      query: ref.read(_txnSearchProvider).toLowerCase(),
+      categoryFilter: ref.read(_txnCategoryFilterProvider),
+      dateRange: ref.read(_txnDateRangeProvider),
+      amountRange: ref.read(_txnAmountRangeProvider),
+      taxOnly: ref.read(_txnTaxFilterProvider),
+      flaggedOnly: ref.read(_txnFlaggedFilterProvider),
+    );
 
     if (txns.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -887,7 +830,7 @@ class TransactionsScreen extends ConsumerWidget {
     final buffer = StringBuffer();
     buffer.writeln(
         'Date,Vendor,Category,Amount,Currency,Amount (ZAR),Tax Deductible,Note,Source');
-    for (final t in txns) {
+    for (final t in txns..sort((a, b) => b.date.compareTo(a.date))) {
       final catName = catById[t.category]?.name ?? t.category;
       final note = (t.note ?? '').replaceAll(',', ';');
       buffer.writeln(

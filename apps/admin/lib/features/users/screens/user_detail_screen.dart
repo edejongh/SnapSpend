@@ -229,6 +229,7 @@ class _PlanDropdownState extends State<_PlanDropdown> {
         try {
           await widget.ref.read(adminFirebaseServiceProvider).updateUserPlan(widget.user.uid, plan);
           widget.ref.invalidate(userDetailProvider(widget.user.uid));
+          widget.ref.invalidate(usersProvider);
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
