@@ -467,6 +467,13 @@ class _QuickStatsRow extends ConsumerWidget {
                 icon: Icons.calendar_month_outlined,
                 label: 'Daily avg',
                 value: CurrencyFormatter.format(avgDaily, 'ZAR'),
+                onTap: avgDaily > 0
+                    ? () {
+                        ref.read(reportPeriodProvider.notifier).state =
+                            'This Month';
+                        context.push('/reports');
+                      }
+                    : null,
               ),
             ),
           ],

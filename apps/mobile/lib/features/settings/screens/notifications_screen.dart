@@ -78,7 +78,7 @@ class NotificationsScreen extends ConsumerWidget {
             SwitchListTile(
               secondary: const Icon(Icons.account_balance_wallet_outlined),
               title: const Text('Budget alerts'),
-              subtitle: const Text('Notify when a budget exceeds 80%'),
+              subtitle: const Text('Notify when spending nears your budget limit'),
               value: prefs.budgetAlerts,
               onChanged: (v) => ref
                   .read(notificationPrefsProvider.notifier)
