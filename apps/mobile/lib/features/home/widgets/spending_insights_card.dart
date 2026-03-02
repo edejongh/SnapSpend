@@ -347,6 +347,7 @@ class SpendingInsightsCard extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       useSafeArea: true,
+      isScrollControlled: true,
       builder: (_) => _AllInsightsSheet(insights: insights),
     );
   }
@@ -358,11 +359,14 @@ class _AllInsightsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return DraggableScrollableSheet(
+      initialChildSize: 0.5,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (_, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
         children: [
           Center(
             child: Container(

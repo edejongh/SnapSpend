@@ -25,6 +25,14 @@ class DashboardScreen extends ConsumerWidget {
                 AppBar(
                   automaticallyImplyLeading: false,
                   title: const Text('Dashboard'),
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Refresh',
+                      onPressed: () => ref.invalidate(dashboardKpisProvider),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                 ),
                 Expanded(
                   child: SingleChildScrollView(

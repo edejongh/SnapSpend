@@ -11,31 +11,38 @@ class AdminSidebar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentRoute = GoRouterState.of(context).matchedLocation;
     final isNarrow = MediaQuery.of(context).size.width < 900;
+    final email =
+        ref.watch(adminAuthStateProvider).asData?.value?.email ?? '';
+    final onLogout =
+        () => ref.read(adminAuthNotifierProvider.notifier).logout();
+
+    final content = _SidebarContent(
+      currentRoute: currentRoute,
+      email: email,
+      onLogout: onLogout,
+    );
 
     if (isNarrow) {
-      return Drawer(
-        child: _SidebarContent(currentRoute: currentRoute, ref: ref),
-      );
+      return Drawer(child: content);
     }
 
-    return SizedBox(
-      width: 240,
-      child: _SidebarContent(currentRoute: currentRoute, ref: ref),
-    );
+    return SizedBox(width: 240, child: content);
   }
 }
 
 class _SidebarContent extends StatelessWidget {
   final String currentRoute;
-  final WidgetRef ref;
+  final String email;
+  final VoidCallback onLogout;
 
-  const _SidebarContent({required this.currentRoute, required this.ref});
+  const _SidebarContent({
+    required this.currentRoute,
+    required this.email,
+    required this.onLogout,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(adminAuthStateProvider).asData?.value;
-    final email = authState?.email ?? '';
-
     return Container(
       color: AdminTheme.sidebar,
       child: Column(
@@ -114,11 +121,10 @@ class _SidebarContent extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               child: InkWell(
                 borderRadius: BorderRadius.circular(8),
-                onTap: () =>
-                    ref.read(adminAuthNotifierProvider.notifier).logout(),
+                onTap: onLogout,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   child: Row(
                     children: [
                       Icon(Icons.logout,
