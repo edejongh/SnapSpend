@@ -112,14 +112,17 @@ class DashboardScreen extends ConsumerWidget {
                             }
                             return Column(
                               children: flags.take(5).map((flag) {
+                                final conf = flag.ocrConfidence ?? 0;
+                                final flagColor = conf >= 0.7
+                                    ? Colors.green
+                                    : conf >= 0.5
+                                        ? Colors.amber.shade700
+                                        : Colors.red;
                                 return ListTile(
-                                  leading: const Icon(
-                                    Icons.flag,
-                                    color: Colors.red,
-                                  ),
+                                  leading: Icon(Icons.flag, color: flagColor),
                                   title: Text(flag.vendor),
                                   subtitle: Text(
-                                    'Confidence: ${((flag.ocrConfidence ?? 0) * 100).toStringAsFixed(0)}%',
+                                    'Confidence: ${(conf * 100).toStringAsFixed(0)}%',
                                   ),
                                   trailing: const Icon(
                                       Icons.chevron_right, size: 18),

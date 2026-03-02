@@ -54,18 +54,42 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                                     ],
                                   ),
                                 )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.all(16),
-                                  itemCount: flags.length,
-                                  itemBuilder: (context, i) => FlagCard(
-                                    transaction: flags[i],
-                                    isSelected:
-                                        _selectedFlag?.txnId ==
-                                            flags[i].txnId,
-                                    onTap: () => setState(
-                                      () => _selectedFlag = flags[i],
+                              : Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          16, 12, 16, 4),
+                                      child: Text(
+                                        '${flags.length} flag${flags.length == 1 ? '' : 's'} open',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                              color: Colors.grey.shade600,
+                                              letterSpacing: 0.5,
+                                            ),
+                                      ),
                                     ),
-                                  ),
+                                    Expanded(
+                                      child: ListView.builder(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 4),
+                                        itemCount: flags.length,
+                                        itemBuilder: (context, i) =>
+                                            FlagCard(
+                                          transaction: flags[i],
+                                          isSelected:
+                                              _selectedFlag?.txnId ==
+                                                  flags[i].txnId,
+                                          onTap: () => setState(
+                                            () => _selectedFlag = flags[i],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                         ),
                         const VerticalDivider(width: 1),
