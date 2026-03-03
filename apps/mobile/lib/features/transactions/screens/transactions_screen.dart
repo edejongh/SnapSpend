@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1076,27 +1077,13 @@ class _TransactionTile extends ConsumerWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       leading: transaction.receiptStoragePath != null
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                transaction.receiptStoragePath!,
-                width: 44,
-                height: 44,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => CircleAvatar(
-                  backgroundColor:
-                      Theme.of(context).colorScheme.primaryContainer,
-                  child: Text(category?.icon ?? '📋',
-                      style: const TextStyle(fontSize: 18)),
-                ),
-                loadingBuilder: (_, child, progress) => progress == null
-                    ? child
-                    : CircleAvatar(
-                        backgroundColor:
-                            Theme.of(context).colorScheme.primaryContainer,
-                        child: Text(category?.icon ?? '📋',
-                            style: const TextStyle(fontSize: 18)),
-                      ),
+          ? _ReceiptThumbnail(
+              storagePath: transaction.receiptStoragePath!,
+              fallback: CircleAvatar(
+                backgroundColor:
+                    Theme.of(context).colorScheme.primaryContainer,
+                child: Text(category?.icon ?? '📋',
+                    style: const TextStyle(fontSize: 18)),
               ),
             )
           : CircleAvatar(
@@ -1156,3 +1143,49 @@ class _TransactionTile extends ConsumerWidget {
   }
 }
 
+// Resolves a Firebase Storage path to a download URL (or uses legacy https://
+// URLs directly) and displays a 44×44 thumbnail. Shows [fallback] while
+// loading and on error.
+class _ReceiptThumbnail extends StatefulWidget {
+  final String storagePath;
+  final Widget fallback;
+  const _ReceiptThumbnail({required this.storagePath, required this.fallback});
+
+  @override
+  State<_ReceiptThumbnail> createState() => _ReceiptThumbnailState();
+}
+
+class _ReceiptThumbnailState extends State<_ReceiptThumbnail> {
+  late final Future<String> _urlFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final path = widget.storagePath;
+    _urlFuture = path.startsWith('https://')
+        ? Future.value(path)
+        : FirebaseStorage.instance.ref(path).getDownloadURL();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String>(
+      future: _urlFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return widget.fallback;
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            snapshot.data!,
+            width: 44,
+            height: 44,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => widget.fallback,
+            loadingBuilder: (_, child, progress) =>
+                progress == null ? child : widget.fallback,
+          ),
+        );
+      },
+    );
+  }
+}
