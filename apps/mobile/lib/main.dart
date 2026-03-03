@@ -46,6 +46,12 @@ void main() async {
 
   final firebaseServiceImpl = FirebaseServiceImpl();
 
+  // Touch lastActiveAt for users who were already signed in (fire-and-forget).
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser != null) {
+    firebaseServiceImpl.touchLastActive(currentUser.uid).catchError((_) {});
+  }
+
   // Keep FCM token fresh when it rotates
   FirebaseMessaging.instance.onTokenRefresh.listen((token) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
