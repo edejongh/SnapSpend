@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:snapspend_core/snapspend_core.dart';
-import 'package:uuid/uuid.dart';
 import '../../../core/providers/category_provider.dart';
 import '../../../core/providers/transaction_provider.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -719,10 +718,12 @@ class TransactionsScreen extends ConsumerWidget {
 
     if (amountRange.$1 != null || amountRange.$2 != null) {
       txns = txns.where((t) {
-        if (amountRange.$1 != null && t.amountZAR < amountRange.$1!)
+        if (amountRange.$1 != null && t.amountZAR < amountRange.$1!) {
           return false;
-        if (amountRange.$2 != null && t.amountZAR > amountRange.$2!)
+        }
+        if (amountRange.$2 != null && t.amountZAR > amountRange.$2!) {
           return false;
+        }
         return true;
       }).toList();
     }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Google "G" logo rendered with Flutter primitives.
 class GoogleIcon extends StatelessWidget {
-  const GoogleIcon();
+  const GoogleIcon({super.key});
 
   @override
   Widget build(BuildContext context) {

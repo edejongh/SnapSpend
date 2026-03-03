@@ -18,7 +18,7 @@ class _SpendingBarChartState extends State<SpendingBarChart> {
   @override
   Widget build(BuildContext context) {
     final entries = widget.dataByMonth.entries.toList();
-    final primary = AppColors.primary;
+    const primary = AppColors.primary;
     final highlight = primary.withValues(alpha: 0.85);
 
     return BarChart(

@@ -311,7 +311,7 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
             ],
             const SizedBox(height: 16),
             DropdownButtonFormField<String?>(
-              value: _selectedCategoryId,
+              initialValue: _selectedCategoryId,
               decoration: const InputDecoration(labelText: 'Category'),
               items: [
                 const DropdownMenuItem(

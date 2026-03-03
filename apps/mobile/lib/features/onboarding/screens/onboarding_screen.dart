@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/providers/auth_provider.dart';
-import '../../../core/providers/budget_provider.dart';
 import '../../../shared/widgets/primary_button.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -254,7 +253,7 @@ class _CurrencyPage extends StatelessWidget {
       title: 'Your home currency',
       subtitle: 'All amounts will be shown in this currency.',
       content: DropdownButtonFormField<String>(
-        value: selected,
+        initialValue: selected,
         decoration: const InputDecoration(labelText: 'Currency'),
         items: AppConstants.supportedCurrencies
             .map((c) => DropdownMenuItem(value: c, child: Text(c)))

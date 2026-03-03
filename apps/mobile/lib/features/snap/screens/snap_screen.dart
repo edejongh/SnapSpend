@@ -159,6 +159,7 @@ class _SnapScreenState extends ConsumerState<SnapScreen>
       if (!mounted) return;
       // Increment scan counter
       final newCount = await ScanCountService.increment();
+      if (!mounted) return;
       ref.read(monthlyScanCountProvider.notifier).state = newCount;
       // Attach the local image path so the review screen can upload it
       final resultWithPath = OcrResult(
@@ -403,7 +404,7 @@ class _CornerBrackets extends StatelessWidget {
     return SizedBox(
       width: width,
       height: height,
-      child: Stack(
+      child: const Stack(
         children: [
           // Top-left
           _Bracket(top: 0, left: 0, lenH: len, lenV: len, thick: thick, color: color),

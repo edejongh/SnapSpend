@@ -28,13 +28,13 @@ final syncStatusProvider = StreamProvider<SyncStatus>((ref) {
   sync.syncPendingTransactions(uid);
 
   // Re-run sync whenever connectivity is restored
-  bool _wasOffline = false;
+  bool wasOffline = false;
   final connSub = Connectivity().onConnectivityChanged.listen((results) {
     final online = results.any((r) => r != ConnectivityResult.none);
-    if (online && _wasOffline) {
+    if (online && wasOffline) {
       sync.syncPendingTransactions(uid);
     }
-    _wasOffline = !online;
+    wasOffline = !online;
   });
   ref.onDispose(connSub.cancel);
 

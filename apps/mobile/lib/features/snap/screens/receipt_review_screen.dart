@@ -281,7 +281,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _selectedCurrency,
+                    initialValue: _selectedCurrency,
                     decoration: const InputDecoration(labelText: 'Currency'),
                     items: AppConstants.supportedCurrencies
                         .map(
@@ -348,7 +348,7 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _selectedCategory,
+              initialValue: _selectedCategory,
               decoration: const InputDecoration(labelText: 'Category'),
               items: categories
                   .map(

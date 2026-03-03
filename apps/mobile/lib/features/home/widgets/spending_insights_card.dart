@@ -39,8 +39,8 @@ class SpendingInsightsCard extends ConsumerWidget {
           icon: diff > 0 ? Icons.trending_up : Icons.trending_down,
           color: diff > 0 ? Colors.orange.shade700 : Colors.green.shade700,
           text: diff > 0
-              ? 'Today\'s spend is ${pct}% above your daily average'
-              : 'Today\'s spend is ${pct}% below your daily average — nice!',
+              ? 'Today\'s spend is $pct% above your daily average'
+              : 'Today\'s spend is $pct% below your daily average — nice!',
         ));
       }
     }
@@ -64,8 +64,8 @@ class SpendingInsightsCard extends ConsumerWidget {
           color:
               delta > 0 ? Colors.red.shade600 : Colors.green.shade600,
           text: delta > 0
-              ? 'Spending is ${pct}% higher than last month so far'
-              : 'Spending is ${pct}% lower than last month — great!',
+              ? 'Spending is $pct% higher than last month so far'
+              : 'Spending is $pct% lower than last month — great!',
         ));
       }
     }
@@ -121,7 +121,7 @@ class SpendingInsightsCard extends ConsumerWidget {
                 .firstWhere((c) => c?.categoryId == spikeCategory,
                     orElse: () => null)
                 ?.name ??
-            spikeCategory!;
+            spikeCategory;
         insights.add(_Insight(
           icon: Icons.category_outlined,
           color: Colors.deepOrange.shade600,

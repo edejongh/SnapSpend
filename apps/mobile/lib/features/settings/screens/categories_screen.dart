@@ -33,7 +33,7 @@ class CategoriesScreen extends ConsumerWidget {
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (userCats) => ListView(
           children: [
-            _SectionHeader(label: 'Default categories'),
+            const _SectionHeader(label: 'Default categories'),
             for (final cat in CategoryConstants.defaultCategories)
               _CategoryTile(
                 category: cat,
@@ -47,7 +47,7 @@ class CategoriesScreen extends ConsumerWidget {
                     : null,
               ),
             const Divider(),
-            _SectionHeader(label: 'My categories'),
+            const _SectionHeader(label: 'My categories'),
             if (userCats.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),

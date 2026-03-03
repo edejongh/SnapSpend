@@ -150,17 +150,17 @@ class _WelcomeCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            _WelcomeStep(
+            const _WelcomeStep(
               number: '1',
               text: 'Tap the camera button below to scan a receipt',
             ),
             const SizedBox(height: 12),
-            _WelcomeStep(
+            const _WelcomeStep(
               number: '2',
               text: 'Review and confirm the extracted details',
             ),
             const SizedBox(height: 12),
-            _WelcomeStep(
+            const _WelcomeStep(
               number: '3',
               text: 'Watch your spending insights come to life',
             ),

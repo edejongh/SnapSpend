@@ -51,6 +51,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final currentCtrl = TextEditingController();
     final newCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -95,7 +96,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (confirmed != true) return;
     if (newCtrl.text != confirmCtrl.text) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(content: Text('Passwords do not match.')),
         );
       }
@@ -103,7 +104,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
     if (newCtrl.text.length < 6) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
               content: Text('Password must be at least 6 characters.')),
         );
@@ -120,13 +121,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await user.reauthenticateWithCredential(cred);
       await user.updatePassword(newCtrl.text);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(content: Text('Password updated successfully.')),
         );
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
               content: Text(e.message ?? 'Failed to update password.')),
         );
@@ -308,7 +309,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: _selectedCurrency,
+                    initialValue: _selectedCurrency,
                     decoration: const InputDecoration(
                       labelText: 'Default currency',
                       prefixIcon: Icon(Icons.currency_exchange_outlined),
