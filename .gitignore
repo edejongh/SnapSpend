@@ -57,6 +57,7 @@ coverage/
 **/GoogleService-Info.plist
 **/firebase_options.dart
 .firebaserc
+scripts/serviceAccountKey.json
 
 # Node.js
 node_modules/
