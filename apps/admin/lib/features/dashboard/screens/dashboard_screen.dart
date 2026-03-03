@@ -47,7 +47,18 @@ class DashboardScreen extends ConsumerWidget {
                               Expanded(child: LinearProgressIndicator()),
                             ],
                           ),
-                          error: (e, _) => Text('Error: $e'),
+                          error: (e, _) => Row(
+                            children: [
+                              Expanded(child: Text('Error loading KPIs: $e')),
+                              const SizedBox(width: 12),
+                              OutlinedButton.icon(
+                                onPressed: () =>
+                                    ref.invalidate(dashboardKpisProvider),
+                                icon: const Icon(Icons.refresh, size: 16),
+                                label: const Text('Retry'),
+                              ),
+                            ],
+                          ),
                           data: (kpis) => Row(
                             children: [
                               Expanded(
@@ -105,7 +116,18 @@ class DashboardScreen extends ConsumerWidget {
                         flagsAsync.when(
                           loading: () =>
                               const CircularProgressIndicator(),
-                          error: (e, _) => Text('Error: $e'),
+                          error: (e, _) => Row(
+                            children: [
+                              Expanded(child: Text('Error loading flags: $e')),
+                              const SizedBox(width: 12),
+                              OutlinedButton.icon(
+                                onPressed: () =>
+                                    ref.invalidate(openFlagsProvider),
+                                icon: const Icon(Icons.refresh, size: 16),
+                                label: const Text('Retry'),
+                              ),
+                            ],
+                          ),
                           data: (flags) {
                             if (flags.isEmpty) {
                               return const Text('No open flags');

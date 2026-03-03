@@ -227,7 +227,7 @@ class _BillingContentState extends State<_BillingContent> {
                                       CircleAvatar(
                                         radius: 14,
                                         child: Text(
-                                          u.email[0].toUpperCase(),
+                                          u.email.isNotEmpty ? u.email[0].toUpperCase() : '?',
                                           style: const TextStyle(
                                               fontSize: 11),
                                         ),
@@ -344,7 +344,7 @@ class _BillingContentState extends State<_BillingContent> {
                   ...filtered.take(_search.isEmpty ? 20 : filtered.length).map(
                         (u) => ListTile(
                           leading: CircleAvatar(
-                            child: Text(u.email[0].toUpperCase()),
+                            child: Text(u.email.isNotEmpty ? u.email[0].toUpperCase() : '?'),
                           ),
                           title: Text(u.displayName ?? u.email),
                           subtitle: u.displayName != null

@@ -36,7 +36,20 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                   child: flagsAsync.when(
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(child: Text('Error: $e')),
+                    error: (e, _) => Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Error: $e'),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: () => ref.invalidate(openFlagsProvider),
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
                     data: (flags) => Row(
                       children: [
                         // Left panel — flags list

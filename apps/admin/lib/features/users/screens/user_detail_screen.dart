@@ -81,13 +81,15 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initials = user.displayName != null && user.displayName!.isNotEmpty
+    final initials = user.displayName != null && user.displayName!.trim().isNotEmpty
         ? user.displayName!
+            .trim()
             .split(' ')
+            .where((w) => w.isNotEmpty)
             .take(2)
             .map((w) => w[0].toUpperCase())
             .join()
-        : user.email[0].toUpperCase();
+        : user.email.isNotEmpty ? user.email[0].toUpperCase() : '?';
 
     return Card(
       child: Padding(
