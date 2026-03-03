@@ -72,11 +72,13 @@ class UserModel extends Equatable {
       email: map['email'] as String,
       displayName: map['displayName'] as String?,
       photoURL: map['photoURL'] as String?,
-      plan: map['plan'] as String,
+      plan: map['plan'] as String? ?? 'free',
       stripeCustomerId: map['stripeCustomerId'] as String?,
       defaultCurrency: map['defaultCurrency'] as String? ?? 'ZAR',
       createdAt: DateTime.parse(map['createdAt'] as String),
-      lastActiveAt: DateTime.parse(map['lastActiveAt'] as String),
+      lastActiveAt: map['lastActiveAt'] != null
+          ? DateTime.parse(map['lastActiveAt'] as String)
+          : DateTime.parse(map['createdAt'] as String),
       onboardingComplete: map['onboardingComplete'] as bool? ?? false,
     );
   }

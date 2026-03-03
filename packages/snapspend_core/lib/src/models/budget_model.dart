@@ -58,7 +58,7 @@ class BudgetModel extends Equatable {
       limitAmount: (map['limitAmount'] as num).toDouble(),
       period: map['period'] as String,
       categoryId: map['categoryId'] as String?,
-      alertAt: (map['alertAt'] as num).toDouble(),
+      alertAt: (map['alertAt'] as num?)?.toDouble() ?? 0.8,
       createdAt: DateTime.parse(map['createdAt'] as String),
     );
   }

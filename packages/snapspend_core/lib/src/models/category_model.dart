@@ -58,9 +58,9 @@ class CategoryModel extends Equatable {
       name: map['name'] as String,
       icon: map['icon'] as String,
       color: map['color'] as String,
-      keywords: List<String>.from(map['keywords'] as List),
-      isDefault: map['isDefault'] as bool,
-      taxDeductibleByDefault: map['taxDeductibleByDefault'] as bool,
+      keywords: List<String>.from((map['keywords'] as List?) ?? []),
+      isDefault: map['isDefault'] as bool? ?? false,
+      taxDeductibleByDefault: map['taxDeductibleByDefault'] as bool? ?? false,
     );
   }
 
