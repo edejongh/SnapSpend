@@ -29,11 +29,13 @@ class OcrServiceImpl implements OcrService {
 
   double _estimateConfidence(RecognizedText recognizedText) {
     if (recognizedText.blocks.isEmpty) return 0.0;
-    // ML Kit doesn't expose per-block confidence on all platforms;
-    // use block count as a proxy
+    // ML Kit doesn't expose per-block confidence on all platforms.
+    // Combine block count with total character count: a genuine receipt
+    // typically has 100+ characters and 5+ text blocks.
     final blockCount = recognizedText.blocks.length;
-    if (blockCount >= 5) return 0.85;
-    if (blockCount >= 2) return 0.65;
+    final charCount = recognizedText.text.length;
+    if (charCount >= 100 || blockCount >= 5) return 0.85;
+    if (charCount >= 40 || blockCount >= 2) return 0.65;
     return 0.40;
   }
 
