@@ -151,7 +151,7 @@ class _ProfileHeader extends StatelessWidget {
                         label: user.defaultCurrency,
                       ),
                       if (!user.onboardingComplete)
-                        _InfoChip(
+                        const _InfoChip(
                           icon: Icons.warning_amber_outlined,
                           label: 'Onboarding incomplete',
                           color: Colors.orange,

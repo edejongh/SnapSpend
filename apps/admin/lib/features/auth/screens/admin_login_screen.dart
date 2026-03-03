@@ -13,6 +13,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -25,7 +26,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     await ref.read(adminAuthNotifierProvider.notifier).login(
           _emailCtrl.text.trim(),
-          _passwordCtrl.text,
+          _passwordCtrl.text.trim(),
         );
   }
 
@@ -69,9 +70,20 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _passwordCtrl,
-                      decoration:
-                          const InputDecoration(labelText: 'Password'),
-                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined),
+                          tooltip: _obscurePassword
+                              ? 'Show password'
+                              : 'Hide password',
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
+                        ),
+                      ),
+                      obscureText: _obscurePassword,
                       validator: (v) =>
                           v == null || v.isEmpty ? 'Required' : null,
                     ),

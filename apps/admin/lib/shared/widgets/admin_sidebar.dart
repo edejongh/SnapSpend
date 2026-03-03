@@ -14,10 +14,9 @@ class AdminSidebar extends ConsumerWidget {
     final isNarrow = MediaQuery.of(context).size.width < 900;
     final email =
         ref.watch(adminAuthStateProvider).asData?.value?.email ?? '';
-    final onLogout =
-        () => ref.read(adminAuthNotifierProvider.notifier).logout();
+    void onLogout() => ref.read(adminAuthNotifierProvider.notifier).logout();
     final openFlagCount =
-        ref.watch(openFlagsProvider).asData?.value?.length ?? 0;
+        ref.watch(openFlagsProvider).asData?.value.length ?? 0;
 
     final content = _SidebarContent(
       currentRoute: currentRoute,

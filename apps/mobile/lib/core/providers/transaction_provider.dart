@@ -396,6 +396,14 @@ class TransactionNotifier extends AsyncNotifier<void> {
         'data': txn.toMap(),
       });
     }
+    // Create admin review flag for low-confidence OCR scans (non-fatal)
+    if (txn.flaggedForReview) {
+      try {
+        await ref.read(firebaseServiceProvider).createAdminFlag(uid, txn);
+      } catch (_) {
+        // Non-fatal — admin flag failure does not block the user
+      }
+    }
     FirebaseAnalytics.instance.logEvent(
       name: 'transaction_added',
       parameters: {

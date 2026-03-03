@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:snapspend_core/snapspend_core.dart';
 import '../../../core/providers/flags_provider.dart';
-import '../../../core/services/admin_firebase_service.dart';
+import '../../../core/providers/users_provider.dart';
 import '../../../shared/widgets/admin_sidebar.dart';
 import '../widgets/flag_card.dart';
 import '../widgets/receipt_image_viewer.dart';

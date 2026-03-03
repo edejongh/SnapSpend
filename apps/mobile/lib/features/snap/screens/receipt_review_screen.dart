@@ -136,7 +136,16 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
           .convert(1.0, currency, AppConstants.defaultCurrency);
       if (mounted) setState(() { _rateToZAR = rate; _fetchingRate = false; });
     } catch (_) {
-      if (mounted) setState(() { _fetchingRate = false; });
+      if (mounted) {
+        setState(() { _rateToZAR = 1.0; _fetchingRate = false; });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Could not fetch exchange rate — amount saved as entered'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 

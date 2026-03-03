@@ -13,7 +13,6 @@ class AdminTheme {
       seedColor: primary,
       brightness: Brightness.light,
       primary: primary,
-      background: background,
       surface: surface,
     );
     return ThemeData(

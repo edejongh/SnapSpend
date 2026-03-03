@@ -81,10 +81,31 @@ class AdminFirebaseService {
   }
 
   Future<void> resolveFlag(String flagId, String resolution) async {
-    await _firestore.collection('admin_flags').doc(flagId).update({
+    // Look up the uid stored in the flag so we can clear flaggedForReview
+    // on the user's own transaction document.
+    final flagDoc =
+        await _firestore.collection('admin_flags').doc(flagId).get();
+    final uid = flagDoc.data()?['uid'] as String?;
+
+    final batch = _firestore.batch();
+    batch.update(_firestore.collection('admin_flags').doc(flagId), {
       'status': resolution,
       'resolvedAt': DateTime.now().toIso8601String(),
     });
+    if (uid != null) {
+      batch.update(
+        _firestore
+            .collection('users')
+            .doc(uid)
+            .collection('transactions')
+            .doc(flagId),
+        {
+          'flaggedForReview': false,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    }
+    await batch.commit();
   }
 
   Future<DashboardKpis> getDashboardKpis() async {

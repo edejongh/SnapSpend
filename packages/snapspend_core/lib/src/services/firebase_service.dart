@@ -37,4 +37,8 @@ abstract class FirebaseService {
   Future<void> saveUserCategory(String uid, CategoryModel category);
 
   Future<void> deleteUserCategory(String uid, String categoryId);
+
+  /// Creates an admin review flag for a low-confidence OCR transaction.
+  /// Non-fatal — failure should not block the transaction save.
+  Future<void> createAdminFlag(String uid, TransactionModel txn);
 }

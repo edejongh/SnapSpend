@@ -169,6 +169,15 @@ class FirebaseServiceImpl implements FirebaseService {
   }
 
   @override
+  Future<void> createAdminFlag(String uid, TransactionModel txn) async {
+    await _firestore.collection('admin_flags').doc(txn.txnId).set({
+      ...txn.toMap(),
+      'uid': uid,
+      'status': 'open',
+    });
+  }
+
+  @override
   Future<void> deleteUserData(String uid) async {
     final userRef = _firestore.collection('users').doc(uid);
 
