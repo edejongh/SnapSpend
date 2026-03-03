@@ -357,13 +357,27 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _RecentTransactions extends StatelessWidget {
+class _RecentTransactions extends StatefulWidget {
   final List<TransactionModel> txns;
   const _RecentTransactions({required this.txns});
 
   @override
+  State<_RecentTransactions> createState() => _RecentTransactionsState();
+}
+
+class _RecentTransactionsState extends State<_RecentTransactions> {
+  final _searchCtrl = TextEditingController();
+  String _search = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (txns.isEmpty) {
+    if (widget.txns.isEmpty) {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(24),
@@ -371,6 +385,16 @@ class _RecentTransactions extends StatelessWidget {
         ),
       );
     }
+
+    final query = _search.toLowerCase();
+    final filtered = query.isEmpty
+        ? widget.txns
+        : widget.txns
+            .where((t) =>
+                t.vendor.toLowerCase().contains(query) ||
+                t.category.toLowerCase().contains(query))
+            .toList();
+    final shown = filtered.take(50).toList();
 
     return Card(
       child: Padding(
@@ -388,8 +412,35 @@ class _RecentTransactions extends StatelessWidget {
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
+                SizedBox(
+                  width: 200,
+                  height: 32,
+                  child: TextField(
+                    controller: _searchCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'Filter by vendor…',
+                      prefixIcon: const Icon(Icons.search, size: 16),
+                      suffixIcon: _search.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 14),
+                              onPressed: () => setState(() {
+                                _searchCtrl.clear();
+                                _search = '';
+                              }),
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (v) => setState(() => _search = v.trim()),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Text(
-                  'Showing ${txns.length > 50 ? '50' : txns.length} of ${txns.length}',
+                  query.isEmpty
+                      ? 'Showing ${shown.length} of ${widget.txns.length}'
+                      : '${shown.length} match${shown.length == 1 ? '' : 'es'}',
                   style: Theme.of(context)
                       .textTheme
                       .bodySmall
@@ -398,7 +449,18 @@ class _RecentTransactions extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            ...txns.take(50).map((t) => _TransactionRow(txn: t)),
+            if (shown.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: Text(
+                    'No transactions match "$_search"',
+                    style: TextStyle(color: Colors.grey.shade500),
+                  ),
+                ),
+              )
+            else
+              ...shown.map((t) => _TransactionRow(txn: t)),
           ],
         ),
       ),
