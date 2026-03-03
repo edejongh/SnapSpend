@@ -130,16 +130,28 @@ class TransactionDetailSheet extends ConsumerWidget {
   Future<void> _duplicateTransaction(
       BuildContext context, WidgetRef ref, TransactionModel t) async {
     Navigator.pop(context);
-    final duplicate = t.copyWith(
+    final now = DateTime.now();
+    // Build the duplicate directly so nullable fields (receipt path, OCR data)
+    // are truly cleared — copyWith(nullableField: null) silently keeps the
+    // existing value due to the ?? pattern.
+    final duplicate = TransactionModel(
       txnId: const Uuid().v4(),
-      date: DateTime.now(),
+      amount: t.amount,
+      currency: t.currency,
+      amountZAR: t.amountZAR,
+      category: t.category,
+      subcategory: t.subcategory,
+      vendor: t.vendor,
+      date: now,
+      note: t.note,
       receiptStoragePath: null,
+      isTaxDeductible: t.isTaxDeductible,
       ocrRawText: null,
       ocrConfidence: null,
-      flaggedForReview: false,
       source: 'manual',
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
+      flaggedForReview: false,
+      createdAt: now,
+      updatedAt: now,
     );
     await ref
         .read(transactionNotifierProvider.notifier)
