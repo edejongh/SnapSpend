@@ -108,6 +108,44 @@ class AdminFirebaseService {
     await batch.commit();
   }
 
+  /// Applies admin corrections to a flagged transaction. The [updates] map
+  /// is merged into both the user's transaction doc and the admin_flags doc,
+  /// and the flag is resolved as 'corrected'.
+  Future<void> correctTransaction(
+    String flagId,
+    Map<String, dynamic> updates,
+  ) async {
+    final flagDoc =
+        await _firestore.collection('admin_flags').doc(flagId).get();
+    final uid = flagDoc.data()?['uid'] as String?;
+
+    final now = DateTime.now().toIso8601String();
+    final batch = _firestore.batch();
+
+    // Resolve the admin flag
+    batch.update(_firestore.collection('admin_flags').doc(flagId), {
+      ...updates,
+      'status': 'corrected',
+      'resolvedAt': now,
+    });
+
+    if (uid != null) {
+      batch.update(
+        _firestore
+            .collection('users')
+            .doc(uid)
+            .collection('transactions')
+            .doc(flagId),
+        {
+          ...updates,
+          'flaggedForReview': false,
+          'updatedAt': now,
+        },
+      );
+    }
+    await batch.commit();
+  }
+
   Future<DashboardKpis> getDashboardKpis() async {
     // Run aggregation queries in parallel
     final results = await Future.wait([

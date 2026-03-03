@@ -147,7 +147,6 @@ class _FlagDetailPanel extends ConsumerWidget {
       BuildContext context, WidgetRef ref, String resolution) async {
     final labels = {
       'approved': 'approved',
-      'corrected': 'marked for correction',
       'dismissed': 'dismissed',
     };
     try {
@@ -157,6 +156,111 @@ class _FlagDetailPanel extends ConsumerWidget {
           SnackBar(
             content:
                 Text('Flag ${labels[resolution] ?? resolution}'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        onResolved();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showCorrectionDialog(BuildContext context, WidgetRef ref) async {
+    final vendorCtrl = TextEditingController(text: transaction.vendor);
+    final amountCtrl = TextEditingController(
+        text: transaction.amount.toStringAsFixed(2));
+    String selectedCategory = transaction.category;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Correct Transaction'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: vendorCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Vendor',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: amountCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Amount (${transaction.currency})',
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: selectedCategory,
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                items: CategoryConstants.defaultCategories
+                    .map((c) => DropdownMenuItem(
+                          value: c.categoryId,
+                          child: Text(c.name),
+                        ))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setDialogState(() => selectedCategory = v);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save correction'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    final newAmount = double.tryParse(amountCtrl.text) ?? transaction.amount;
+    final updates = <String, dynamic>{
+      'vendor': vendorCtrl.text.trim(),
+      'amount': newAmount,
+      'amountZAR': newAmount, // assumes same currency; fine for ZAR receipts
+      'category': selectedCategory,
+    };
+
+    try {
+      await ref
+          .read(adminFirebaseServiceProvider)
+          .correctTransaction(transaction.txnId, updates);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Transaction corrected'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -260,7 +364,7 @@ class _FlagDetailPanel extends ConsumerWidget {
               ),
               const SizedBox(width: 12),
               OutlinedButton.icon(
-                onPressed: () => _resolve(context, ref, 'corrected'),
+                onPressed: () => _showCorrectionDialog(context, ref),
                 icon: const Icon(Icons.edit),
                 label: const Text('Correct'),
               ),
