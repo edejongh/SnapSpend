@@ -113,13 +113,13 @@ class TransactionModel extends Equatable {
       date: DateTime.parse(map['date'] as String),
       note: map['note'] as String?,
       receiptStoragePath: map['receiptStoragePath'] as String?,
-      isTaxDeductible: map['isTaxDeductible'] as bool,
+      isTaxDeductible: map['isTaxDeductible'] as bool? ?? false,
       ocrRawText: map['ocrRawText'] as String?,
       ocrConfidence: map['ocrConfidence'] != null
           ? (map['ocrConfidence'] as num).toDouble()
           : null,
-      source: map['source'] as String,
-      flaggedForReview: map['flaggedForReview'] as bool,
+      source: map['source'] as String? ?? 'manual',
+      flaggedForReview: map['flaggedForReview'] as bool? ?? false,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
     );
