@@ -56,7 +56,20 @@ class _UsersListScreenState extends ConsumerState<UsersListScreen> {
                   child: usersAsync.when(
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(child: Text('Error: $e')),
+                    error: (e, _) => Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Error: $e'),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: () => ref.invalidate(usersProvider),
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
                     data: (users) {
                       final q = _searchQuery.toLowerCase();
                       final filtered = _searchQuery.isEmpty
@@ -79,14 +92,27 @@ class _UsersListScreenState extends ConsumerState<UsersListScreen> {
                           children: [
                             Padding(
                               padding: const EdgeInsets.only(bottom: 12),
-                              child: Text(
-                                _searchQuery.isEmpty
-                                    ? '${users.length} users total'
-                                    : '${filtered.length} of ${users.length} users',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(color: Colors.grey.shade600),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    _searchQuery.isEmpty
+                                        ? '${users.length} users total'
+                                        : '${filtered.length} of ${users.length} users',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: Colors.grey.shade600),
+                                  ),
+                                  if (users.length >= 100) ...[
+                                    const SizedBox(width: 6),
+                                    Tooltip(
+                                      message: 'Showing first 100 users only',
+                                      child: Icon(Icons.info_outline,
+                                          size: 14,
+                                          color: Colors.amber.shade700),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                             Expanded(
