@@ -421,11 +421,16 @@ class _SyncTile extends ConsumerWidget {
           ? null
           : () async {
               final sync = ref.read(syncServiceProvider);
-              await sync.syncPendingTransactions(uid);
-              ref.invalidate(transactionsProvider);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await sync.syncPendingTransactions(uid);
+                ref.invalidate(transactionsProvider);
+                messenger.showSnackBar(
                   const SnackBar(content: Text('Sync complete')),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(content: Text('Sync failed: $e')),
                 );
               }
             },
