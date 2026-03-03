@@ -181,16 +181,15 @@ class FirebaseServiceImpl implements FirebaseService {
   Future<void> deleteUserData(String uid) async {
     final userRef = _firestore.collection('users').doc(uid);
 
-    final txnDocs =
-        await userRef.collection('transactions').get();
-    for (final doc in txnDocs.docs) {
-      await doc.reference.delete();
-    }
+    // Fetch all subcollections in parallel then delete docs concurrently.
+    final results = await Future.wait([
+      userRef.collection('transactions').get(),
+      userRef.collection('budgets').get(),
+      userRef.collection('categories').get(),
+    ]);
 
-    final budgetDocs = await userRef.collection('budgets').get();
-    for (final doc in budgetDocs.docs) {
-      await doc.reference.delete();
-    }
+    final deletes = results.expand((snap) => snap.docs).map((doc) => doc.reference.delete());
+    await Future.wait(deletes);
 
     await userRef.delete();
   }

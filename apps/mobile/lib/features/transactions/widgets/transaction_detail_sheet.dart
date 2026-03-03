@@ -478,6 +478,24 @@ class _ReceiptImageState extends State<_ReceiptImage> {
     return FutureBuilder<String>(
       future: _urlFuture,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return SizedBox(
+            height: 160,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.broken_image_outlined,
+                      size: 36, color: Colors.grey.shade400),
+                  const SizedBox(height: 8),
+                  Text('Image unavailable',
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey.shade500)),
+                ],
+              ),
+            ),
+          );
+        }
         if (!snapshot.hasData) {
           return const SizedBox(
             height: 160,
@@ -508,7 +526,23 @@ class _ReceiptImageState extends State<_ReceiptImage> {
                     child: Center(child: CircularProgressIndicator()),
                   );
                 },
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                errorBuilder: (_, __, ___) => SizedBox(
+                  height: 160,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.broken_image_outlined,
+                            size: 36, color: Colors.grey.shade400),
+                        const SizedBox(height: 8),
+                        Text('Image unavailable',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500)),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
