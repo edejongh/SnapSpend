@@ -195,7 +195,19 @@ class _FlagDetailPanel extends ConsumerWidget {
               child: imageUrlAsync!.when(
                 loading: () =>
                     const Center(child: CircularProgressIndicator()),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, __) => Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.broken_image_outlined,
+                          size: 36, color: Colors.grey.shade400),
+                      const SizedBox(height: 8),
+                      Text('Image unavailable',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade500)),
+                    ],
+                  ),
+                ),
                 data: (url) => ReceiptImageViewer(imageUrl: url),
               ),
             ),
