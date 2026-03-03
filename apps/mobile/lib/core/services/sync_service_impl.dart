@@ -43,6 +43,12 @@ class SyncServiceImpl implements SyncService {
             await _firebaseService.saveBudget(uid, budget);
           case 'deleteBudget':
             await _firebaseService.deleteBudget(uid, op['id'] as String);
+          case 'saveUserCategory':
+            final cat = CategoryModel.fromMap(
+                Map<String, dynamic>.from(op['data'] as Map));
+            await _firebaseService.saveUserCategory(uid, cat);
+          case 'deleteUserCategory':
+            await _firebaseService.deleteUserCategory(uid, op['id'] as String);
           default:
             break; // Unknown op type — remove it
         }

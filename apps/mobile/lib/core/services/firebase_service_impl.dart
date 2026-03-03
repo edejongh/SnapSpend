@@ -181,11 +181,12 @@ class FirebaseServiceImpl implements FirebaseService {
   Future<void> deleteUserData(String uid) async {
     final userRef = _firestore.collection('users').doc(uid);
 
-    // Fetch all subcollections in parallel then delete docs concurrently.
+    // Fetch all subcollections + admin flags in parallel then delete concurrently.
     final results = await Future.wait([
       userRef.collection('transactions').get(),
       userRef.collection('budgets').get(),
       userRef.collection('categories').get(),
+      _firestore.collection('admin_flags').where('uid', isEqualTo: uid).get(),
     ]);
 
     final deletes = results.expand((snap) => snap.docs).map((doc) => doc.reference.delete());
