@@ -48,11 +48,17 @@ class AuthNotifier extends AsyncNotifier<void> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       try {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
+        final result = await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: email,
           password: password,
         );
         await _registerFcmToken();
+        // Update lastActiveAt — non-fatal
+        try {
+          await ref
+              .read(firebaseServiceProvider)
+              .touchLastActive(result.user!.uid);
+        } catch (_) {}
         await FirebaseAnalytics.instance.logLogin(loginMethod: 'email');
       } on FirebaseAuthException catch (e) {
         throw _friendlyAuthError(e);
@@ -144,6 +150,13 @@ class AuthNotifier extends AsyncNotifier<void> {
           onboardingComplete: false,
         );
         await ref.read(firebaseServiceProvider).saveUser(userModel);
+      } else {
+        // Update lastActiveAt for returning users — non-fatal
+        try {
+          await ref
+              .read(firebaseServiceProvider)
+              .touchLastActive(result.user!.uid);
+        } catch (_) {}
       }
       await _registerFcmToken();
       await FirebaseAnalytics.instance.logLogin(loginMethod: 'google');

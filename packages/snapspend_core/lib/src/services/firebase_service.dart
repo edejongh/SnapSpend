@@ -38,6 +38,9 @@ abstract class FirebaseService {
 
   Future<void> deleteUserCategory(String uid, String categoryId);
 
+  /// Updates only the lastActiveAt timestamp for a user. Non-fatal.
+  Future<void> touchLastActive(String uid);
+
   /// Creates an admin review flag for a low-confidence OCR transaction.
   /// Non-fatal — failure should not block the transaction save.
   Future<void> createAdminFlag(String uid, TransactionModel txn);

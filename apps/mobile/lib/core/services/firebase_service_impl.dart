@@ -169,6 +169,14 @@ class FirebaseServiceImpl implements FirebaseService {
   }
 
   @override
+  Future<void> touchLastActive(String uid) async {
+    await _firestore.collection('users').doc(uid).set(
+      {'lastActiveAt': DateTime.now().toIso8601String()},
+      SetOptions(merge: true),
+    );
+  }
+
+  @override
   Future<void> createAdminFlag(String uid, TransactionModel txn) async {
     await _firestore.collection('admin_flags').doc(txn.txnId).set({
       ...txn.toMap(),
