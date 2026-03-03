@@ -249,7 +249,10 @@ class _FlagDetailPanel extends ConsumerWidget {
     final updates = <String, dynamic>{
       'vendor': vendorCtrl.text.trim(),
       'amount': newAmount,
-      'amountZAR': newAmount, // assumes same currency; fine for ZAR receipts
+      // Only update amountZAR when the transaction is natively in ZAR.
+      // For foreign-currency receipts the exchange rate conversion is left
+      // to the user's existing amountZAR value.
+      if (transaction.currency == 'ZAR') 'amountZAR': newAmount,
       'category': selectedCategory,
     };
 
