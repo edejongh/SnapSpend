@@ -58,6 +58,14 @@ class _BillingContent extends StatefulWidget {
 
 class _BillingContentState extends State<_BillingContent> {
   String _planFilter = 'all';
+  final _searchCtrl = TextEditingController();
+  String _search = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,11 +84,13 @@ class _BillingContentState extends State<_BillingContent> {
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-    final filtered = _planFilter == 'all'
-        ? widget.users
-        : widget.users
-            .where((u) => u.plan == _planFilter)
-            .toList();
+    final query = _search.toLowerCase();
+    final filtered = widget.users.where((u) {
+      if (_planFilter != 'all' && u.plan != _planFilter) return false;
+      if (query.isEmpty) return true;
+      return u.email.toLowerCase().contains(query) ||
+          (u.displayName?.toLowerCase().contains(query) ?? false);
+    }).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -301,10 +311,37 @@ class _BillingContentState extends State<_BillingContent> {
                                 setState(() => _planFilter = plan),
                           ),
                         ),
+                      const Spacer(),
+                      SizedBox(
+                        width: 220,
+                        height: 36,
+                        child: TextField(
+                          controller: _searchCtrl,
+                          decoration: InputDecoration(
+                            hintText: 'Search email or name…',
+                            prefixIcon: const Icon(Icons.search, size: 18),
+                            suffixIcon: _search.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 16),
+                                    onPressed: () => setState(() {
+                                      _searchCtrl.clear();
+                                      _search = '';
+                                    }),
+                                  )
+                                : null,
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 0),
+                            isDense: true,
+                            border: const OutlineInputBorder(),
+                          ),
+                          onChanged: (v) =>
+                              setState(() => _search = v.trim()),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  ...filtered.take(20).map(
+                  ...filtered.take(_search.isEmpty ? 20 : filtered.length).map(
                         (u) => ListTile(
                           leading: CircleAvatar(
                             child: Text(u.email[0].toUpperCase()),
@@ -336,7 +373,7 @@ class _BillingContentState extends State<_BillingContent> {
                           ),
                         ),
                       ),
-                  if (filtered.length > 20)
+                  if (_search.isEmpty && filtered.length > 20)
                     Padding(
                       padding: const EdgeInsets.only(top: 8, left: 16),
                       child: Text(
