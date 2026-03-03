@@ -41,6 +41,8 @@ enum _TxnDateRange {
   lastMonth,
   last30Days,
   last7Days,
+  taxYearSA,
+  lastTaxYearSA,
 }
 
 extension _TxnDateRangeLabel on _TxnDateRange {
@@ -52,6 +54,8 @@ extension _TxnDateRangeLabel on _TxnDateRange {
         _TxnDateRange.lastMonth => 'Last month',
         _TxnDateRange.last30Days => 'Last 30 days',
         _TxnDateRange.last7Days => 'Last 7 days',
+        _TxnDateRange.taxYearSA => 'Tax Year (SA)',
+        _TxnDateRange.lastTaxYearSA => 'Last Tax Year (SA)',
       };
 }
 
@@ -704,6 +708,14 @@ class TransactionsScreen extends ConsumerWidget {
         case _TxnDateRange.last7Days:
           from = now.subtract(const Duration(days: 7));
           to = null;
+        case _TxnDateRange.taxYearSA:
+          final startYear = now.month >= 3 ? now.year : now.year - 1;
+          from = DateTime(startYear, 3, 1);
+          to = DateTime(startYear + 1, 3, 1); // exclusive = up to end of Feb
+        case _TxnDateRange.lastTaxYearSA:
+          final startYear = (now.month >= 3 ? now.year : now.year - 1) - 1;
+          from = DateTime(startYear, 3, 1);
+          to = DateTime(startYear + 1, 3, 1);
         case _TxnDateRange.all:
           from = DateTime(2000);
           to = null;

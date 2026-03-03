@@ -149,12 +149,64 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
     }
   }
 
+  /// Returns a nearby transaction that looks like a duplicate, or null.
+  /// Only checks vendor (case-insensitive), amount (within 10%), and date
+  /// (within 3 days). Ignores the transaction being edited.
+  TransactionModel? _findDuplicate(double amountZAR, String vendor, DateTime date) {
+    final all = ref.read(transactionsProvider).asData?.value ?? [];
+    final vendorLower = vendor.toLowerCase().trim();
+    for (final t in all) {
+      if (t.txnId == widget.existingTransaction?.txnId) continue;
+      if (t.vendor.toLowerCase().trim() != vendorLower) continue;
+      final amountClose = amountZAR <= 0 ||
+          (t.amountZAR - amountZAR).abs() / amountZAR <= 0.10;
+      final dateDiff = t.date.difference(date).inDays.abs();
+      if (amountClose && dateDiff <= 3) return t;
+    }
+    return null;
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final amount = double.tryParse(_amountCtrl.text) ?? 0;
+    final vendor = _vendorCtrl.text.trim();
+
+    // Duplicate detection (new transactions only)
+    if (!_isEditing && vendor.isNotEmpty && amount > 0) {
+      final amountZAR = amount * _rateToZAR;
+      final duplicate = _findDuplicate(amountZAR, vendor, _selectedDate);
+      if (duplicate != null && mounted) {
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Possible duplicate'),
+            content: Text(
+              'A similar transaction already exists:\n\n'
+              '${duplicate.vendor} — '
+              '${CurrencyFormatter.format(duplicate.amountZAR, 'ZAR')}\n'
+              '${DateFormatter.formatDate(duplicate.date)}\n\n'
+              'Save this one too?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Save anyway'),
+              ),
+            ],
+          ),
+        );
+        if (proceed != true) return;
+      }
+    }
+
     HapticFeedback.mediumImpact();
     setState(() => _isSaving = true);
 
-    final amount = double.tryParse(_amountCtrl.text) ?? 0;
     final existing = widget.existingTransaction;
     final ocr = widget.ocrResult;
     final noteText = _noteCtrl.text.trim();

@@ -9,6 +9,8 @@ const reportPeriods = [
   'Last 6 Months',
   'This Year',
   'Last Year',
+  'Tax Year (SA)',
+  'Last Tax Year (SA)',
   'Custom…',
 ];
 
@@ -18,6 +20,24 @@ final reportPeriodProvider =
 /// Only used when reportPeriodProvider == 'Custom…'.
 final reportCustomRangeProvider =
     StateProvider<(DateTime, DateTime)?>((_) => null);
+
+/// Returns the start year of the SA tax year that contains [now].
+/// SA tax year starts March 1: if month >= 3 the tax year started this year,
+/// otherwise it started last year.
+int _saTaxYearStartYear(DateTime now) =>
+    now.month >= 3 ? now.year : now.year - 1;
+
+/// Returns the [start, end] of the SA tax year offset by [offset] years
+/// (0 = current, -1 = previous).
+(DateTime, DateTime) _saTaxYearRange(int offset) {
+  final now = DateTime.now();
+  final startYear = _saTaxYearStartYear(now) + offset;
+  final start = DateTime(startYear, 3, 1);
+  // End = last moment of last day of February in the following year.
+  // DateTime(y, 3, 0) = last day of Feb in year y (handles leap years).
+  final end = DateTime(startYear + 1, 3, 0, 23, 59, 59);
+  return (start, end);
+}
 
 (DateTime, DateTime) reportDateRange(String period) {
   final now = DateTime.now();
@@ -36,6 +56,10 @@ final reportCustomRangeProvider =
     case 'Last Year':
       return (DateTime(now.year - 1, 1, 1),
           DateTime(now.year - 1, 12, 31, 23, 59, 59));
+    case 'Tax Year (SA)':
+      return _saTaxYearRange(0);
+    case 'Last Tax Year (SA)':
+      return _saTaxYearRange(-1);
     default: // This Month
       return (DateTime(now.year, now.month, 1), end);
   }
@@ -63,6 +87,10 @@ final reportCustomRangeProvider =
       // Compare to the year before
       return (DateTime(now.year - 2, 1, 1),
           DateTime(now.year - 2, 12, 31, 23, 59, 59));
+    case 'Tax Year (SA)':
+      return _saTaxYearRange(-1);
+    case 'Last Tax Year (SA)':
+      return _saTaxYearRange(-2);
     default: // This Month → compare to last month
       final lastMonth = DateTime(now.year, now.month - 1);
       final lastMonthEnd = DateTime(now.year, now.month, 0, 23, 59, 59);
@@ -114,6 +142,24 @@ final reportSpendByMonthProvider = Provider<Map<String, double>>((ref) {
   final period = ref.watch(reportPeriodProvider);
   final txns = ref.watch(reportTransactionsProvider);
   final now = DateTime.now();
+
+  // SA tax year: always 12 months starting March
+  if (period == 'Tax Year (SA)' || period == 'Last Tax Year (SA)') {
+    final offset = period == 'Tax Year (SA)' ? 0 : -1;
+    final startYear = _saTaxYearStartYear(now) + offset;
+    final map = <String, double>{};
+    for (int i = 0; i < 12; i++) {
+      final m = DateTime(startYear, 3 + i); // March=3 → Feb next year
+      map[_monthLabel(m)] = 0.0;
+    }
+    for (final t in txns) {
+      final label = _monthLabel(t.date);
+      if (map.containsKey(label)) {
+        map[label] = (map[label] ?? 0.0) + t.amountZAR;
+      }
+    }
+    return map;
+  }
 
   final numMonths = switch (period) {
     'Last 3 Months' => 3,
