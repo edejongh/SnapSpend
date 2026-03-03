@@ -74,6 +74,13 @@ final _txnTaxFilterProvider =
 final _txnFlaggedFilterProvider =
     StateProvider.autoDispose<bool>((ref) => false);
 
+// Tracks whether deep-link params have been applied on first build.
+// Without this, clearing a filter re-triggers the initialization because
+// the provider resets to its default (null/false/all) which matches the
+// "not yet applied" condition.
+final _txnInitializedProvider =
+    StateProvider.autoDispose<bool>((ref) => false);
+
 // Multi-select mode
 final _selectionModeProvider =
     StateProvider.autoDispose<bool>((ref) => false);
@@ -111,43 +118,37 @@ class TransactionsScreen extends ConsumerWidget {
     final selectionMode = ref.watch(_selectionModeProvider);
     final selectedIds = ref.watch(_selectedTxnIdsProvider);
 
-    // Apply deep-link category on first build (provider is null on fresh open)
-    if (initialCategory != null && categoryFilter == null) {
+    // Apply deep-link params exactly once. Using a dedicated initialized flag
+    // prevents re-applying the initial category/search/range after the user
+    // manually clears a filter (which resets the provider to null/false/all).
+    final initialized = ref.watch(_txnInitializedProvider);
+    if (!initialized) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(_txnCategoryFilterProvider.notifier).state = initialCategory;
+        if (initialCategory != null) {
+          ref.read(_txnCategoryFilterProvider.notifier).state = initialCategory;
+        }
+        if (initialSearch != null && initialSearch!.isNotEmpty) {
+          ref.read(_txnSearchProvider.notifier).state = initialSearch!;
+        }
+        if (initialFlagged) {
+          ref.read(_txnFlaggedFilterProvider.notifier).state = true;
+        }
+        if (initialDateRange != null) {
+          final mapped = switch (initialDateRange) {
+            'today' => _TxnDateRange.today,
+            'this_week' => _TxnDateRange.thisWeek,
+            'this_month' => _TxnDateRange.thisMonth,
+            'last_month' => _TxnDateRange.lastMonth,
+            'last_7' => _TxnDateRange.last7Days,
+            'last_30' => _TxnDateRange.last30Days,
+            _ => null,
+          };
+          if (mapped != null) {
+            ref.read(_txnDateRangeProvider.notifier).state = mapped;
+          }
+        }
+        ref.read(_txnInitializedProvider.notifier).state = true;
       });
-    }
-
-    // Apply deep-link search on first build
-    if (initialSearch != null && query.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(_txnSearchProvider.notifier).state = initialSearch!;
-      });
-    }
-
-    // Apply deep-link flagged filter on first build
-    if (initialFlagged && !flaggedOnly) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(_txnFlaggedFilterProvider.notifier).state = true;
-      });
-    }
-
-    // Apply deep-link date range on first build
-    if (initialDateRange != null && dateRange == _TxnDateRange.all) {
-      final mapped = switch (initialDateRange) {
-        'today' => _TxnDateRange.today,
-        'this_week' => _TxnDateRange.thisWeek,
-        'this_month' => _TxnDateRange.thisMonth,
-        'last_month' => _TxnDateRange.lastMonth,
-        'last_7' => _TxnDateRange.last7Days,
-        'last_30' => _TxnDateRange.last30Days,
-        _ => null,
-      };
-      if (mapped != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ref.read(_txnDateRangeProvider.notifier).state = mapped;
-        });
-      }
     }
 
     void exitSelection() {
