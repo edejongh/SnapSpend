@@ -69,8 +69,20 @@ class _SpendingBarChartState extends State<SpendingBarChart> {
             )
             .toList(),
         titlesData: FlTitlesData(
-          leftTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: true, reservedSize: 48),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 52,
+              getTitlesWidget: (value, meta) {
+                final label = value >= 1000
+                    ? 'R${(value / 1000).toStringAsFixed(value >= 10000 ? 0 : 1)}k'
+                    : 'R${value.toStringAsFixed(0)}';
+                return Text(
+                  label,
+                  style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
+                );
+              },
+            ),
           ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(

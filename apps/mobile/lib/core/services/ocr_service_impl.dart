@@ -38,11 +38,13 @@ class OcrServiceImpl implements OcrService {
   }
 
   double? _extractAmount(String text) {
-    // Match patterns like R 123.45, 123,45, 123.45, R123.45
+    // Try labelled totals first (more reliable than bare currency symbols)
+    // to avoid matching a line-item amount instead of the receipt total.
     final patterns = [
-      RegExp(r'R\s*(\d{1,6}[.,]\d{2})', caseSensitive: false),
       RegExp(r'TOTAL[:\s]+R?\s*(\d{1,6}[.,]\d{2})', caseSensitive: false),
       RegExp(r'AMOUNT[:\s]+R?\s*(\d{1,6}[.,]\d{2})', caseSensitive: false),
+      RegExp(r'DUE[:\s]+R?\s*(\d{1,6}[.,]\d{2})', caseSensitive: false),
+      RegExp(r'R\s*(\d{1,6}[.,]\d{2})', caseSensitive: false),
       RegExp(r'(\d{1,6}\.\d{2})'),
     ];
     for (final pattern in patterns) {
