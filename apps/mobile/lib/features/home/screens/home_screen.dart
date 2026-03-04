@@ -29,8 +29,9 @@ class HomeScreen extends ConsumerWidget {
     final rawName = firebaseUser?.displayName ??
         firebaseUser?.email?.split('@').first ??
         'there';
-    final displayName =
-        rawName[0].toUpperCase() + rawName.substring(1);
+    final displayName = rawName.isEmpty
+        ? 'there'
+        : rawName[0].toUpperCase() + rawName.substring(1);
 
     return AppScaffold(
       appBar: AppBar(

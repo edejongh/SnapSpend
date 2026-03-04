@@ -158,7 +158,8 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
     for (final t in all) {
       if (t.txnId == widget.existingTransaction?.txnId) continue;
       if (t.vendor.toLowerCase().trim() != vendorLower) continue;
-      final amountClose = amountZAR <= 0 ||
+      if (amountZAR <= 0) continue;
+      final amountClose =
           (t.amountZAR - amountZAR).abs() / amountZAR <= 0.10;
       final dateDiff = t.date.difference(date).inDays.abs();
       if (amountClose && dateDiff <= 3) return t;
