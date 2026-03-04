@@ -37,10 +37,12 @@ class ReportsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Reports'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.download_outlined),
-            tooltip: 'Export CSV',
-            onPressed: () => _exportCsv(context, ref),
+          Builder(
+            builder: (btnCtx) => IconButton(
+              icon: const Icon(Icons.download_outlined),
+              tooltip: 'Export CSV',
+              onPressed: () => _exportCsv(btnCtx, ref),
+            ),
           ),
         ],
       ),
@@ -211,10 +213,24 @@ class ReportsScreen extends ConsumerWidget {
     final file = File('${dir.path}/snapspend_${period}_$timestamp.csv');
     await file.writeAsString(buffer.toString());
 
-    await Share.shareXFiles(
-      [XFile(file.path, mimeType: 'text/csv')],
-      subject: 'SnapSpend Export — $period',
-    );
+    if (!context.mounted) return;
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : Rect.fromLTWH(0, 0, 1, 1);
+    try {
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'text/csv')],
+        subject: 'SnapSpend Export — $period',
+        sharePositionOrigin: origin,
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
   }
 
   void _showDayTransactions(
@@ -624,7 +640,7 @@ class _TaxSummaryCardState extends ConsumerState<_TaxSummaryCard> {
 
   static const _previewCount = 5;
 
-  Future<void> _exportTax(BuildContext context) async {
+  Future<void> _exportTax(BuildContext context, BuildContext btnCtx) async {
     final categories = ref.read(categoriesProvider);
     final catById = {for (final c in categories) c.categoryId: c};
     final period =
@@ -650,10 +666,24 @@ class _TaxSummaryCardState extends ConsumerState<_TaxSummaryCard> {
         '${dir.path}/snapspend_tax_${period}_$timestamp.csv');
     await file.writeAsString(buffer.toString());
 
-    await Share.shareXFiles(
-      [XFile(file.path, mimeType: 'text/csv')],
-      subject: 'SnapSpend Tax Report — $period',
-    );
+    if (!context.mounted) return;
+    final box = btnCtx.findRenderObject() as RenderBox?;
+    final origin = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : Rect.fromLTWH(0, 0, 1, 1);
+    try {
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'text/csv')],
+        subject: 'SnapSpend Tax Report — $period',
+        sharePositionOrigin: origin,
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -690,12 +720,14 @@ class _TaxSummaryCardState extends ConsumerState<_TaxSummaryCard> {
                       ),
                 ),
                 const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.download_outlined,
-                      size: 18, color: Colors.green),
-                  tooltip: 'Export tax report',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => _exportTax(context),
+                Builder(
+                  builder: (btnCtx) => IconButton(
+                    icon: const Icon(Icons.download_outlined,
+                        size: 18, color: Colors.green),
+                    tooltip: 'Export tax report',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _exportTax(context, btnCtx),
+                  ),
                 ),
               ],
             ),

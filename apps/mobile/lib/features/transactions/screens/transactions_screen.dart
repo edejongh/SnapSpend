@@ -235,11 +235,13 @@ class TransactionsScreen extends ConsumerWidget {
                     },
                   ),
                 if (selectedIds.isNotEmpty) ...[
-                  IconButton(
-                    icon: const Icon(Icons.download_outlined),
-                    tooltip: 'Export selected',
-                    onPressed: () =>
-                        _exportSelected(context, ref, selectedIds),
+                  Builder(
+                    builder: (btnCtx) => IconButton(
+                      icon: const Icon(Icons.download_outlined),
+                      tooltip: 'Export selected',
+                      onPressed: () =>
+                          _exportSelected(btnCtx, ref, selectedIds),
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
@@ -300,10 +302,12 @@ class TransactionsScreen extends ConsumerWidget {
             tooltip: 'Amount filter',
             onPressed: () => _showAmountFilter(context, ref, amountRange),
           ),
-          IconButton(
-            icon: const Icon(Icons.download_outlined),
-            tooltip: 'Export CSV',
-            onPressed: () => _exportCsv(context, ref),
+          Builder(
+            builder: (btnCtx) => IconButton(
+              icon: const Icon(Icons.download_outlined),
+              tooltip: 'Export CSV',
+              onPressed: () => _exportCsv(btnCtx, ref),
+            ),
           ),
           PopupMenuButton<_TxnDateRange>(
             icon: Stack(
@@ -867,10 +871,24 @@ class TransactionsScreen extends ConsumerWidget {
         File('${dir.path}/snapspend_transactions_$timestamp.csv');
     await file.writeAsString(buffer.toString());
 
-    await Share.shareXFiles(
-      [XFile(file.path, mimeType: 'text/csv')],
-      subject: 'SnapSpend Transactions Export',
-    );
+    if (!context.mounted) return;
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : Rect.fromLTWH(0, 0, 1, 1);
+    try {
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'text/csv')],
+        subject: 'SnapSpend Transactions Export',
+        sharePositionOrigin: origin,
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _exportSelected(
@@ -907,10 +925,24 @@ class TransactionsScreen extends ConsumerWidget {
         File('${dir.path}/snapspend_selected_$timestamp.csv');
     await file.writeAsString(buffer.toString());
 
-    await Share.shareXFiles(
-      [XFile(file.path, mimeType: 'text/csv')],
-      subject: 'SnapSpend — ${ids.length} Transactions Export',
-    );
+    if (!context.mounted) return;
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : Rect.fromLTWH(0, 0, 1, 1);
+    try {
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'text/csv')],
+        subject: 'SnapSpend — ${ids.length} Transactions Export',
+        sharePositionOrigin: origin,
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _showAmountFilter(
