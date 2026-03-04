@@ -92,7 +92,19 @@ class OcrServiceImpl implements OcrService {
           day = int.parse(match.group(1)!);
           month = int.parse(match.group(2)!);
           year = int.parse(match.group(3)!);
-          if (year < 100) year += 2000;
+          if (year < 100) {
+            // Two-digit year: try both century interpretations and pick the
+            // most recent date that is not in the future. This handles OCR
+            // misreads like "25" on a 2026 receipt (reads "6" as "5").
+            final y = year + 2000;
+            final now = DateTime.now();
+            final candidate = DateTime(y, month, day);
+            final candidatePlus1 = DateTime(y + 1, month, day);
+            year = (!candidatePlus1.isAfter(now) &&
+                    candidatePlus1.isAfter(candidate))
+                ? y + 1
+                : y;
+          }
         }
         if (month < 1 || month > 12 || day < 1 || day > 31) continue;
         return DateTime(year, month, day);

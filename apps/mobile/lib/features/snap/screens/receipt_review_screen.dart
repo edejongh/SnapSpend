@@ -408,6 +408,26 @@ class _ReceiptReviewScreenState extends ConsumerState<ReceiptReviewScreen> {
                 if (picked != null) setState(() => _selectedDate = picked);
               },
             ),
+            // Warn when the year looks wrong — OCR often misreads the last
+            // digit of a 2-digit year (e.g. reads "26" as "25").
+            if (_selectedDate.year != DateTime.now().year)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber,
+                        size: 14, color: Colors.orange.shade700),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Year is ${_selectedDate.year} — tap the date above to correct it if needed.',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.orange.shade800),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _selectedCategory,
