@@ -54,6 +54,16 @@ class ReportsScreen extends ConsumerWidget {
               ? '${_fmtDate(customRange.$1)} – ${_fmtDate(customRange.$2)}'
               : period;
 
+          // Compute the actual date range so we can show it as a subtitle
+          final (rangeFrom, rangeTo) = period == 'Custom…' && customRange != null
+              ? (customRange.$1, customRange.$2)
+              : period == 'Custom…'
+                  ? (DateTime.now(), DateTime.now())
+                  : reportDateRange(period);
+          final dateRangeLabel = period != 'Custom…'
+              ? '${_fmtDate(rangeFrom)} – ${_fmtDate(rangeTo)}'
+              : null;
+
           return ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -63,7 +73,7 @@ class ReportsScreen extends ConsumerWidget {
               onChanged: (p) => _onPeriodChanged(context, ref, p),
             ),
             const SizedBox(height: 16),
-            _TotalCard(total: total, period: periodLabel, previousTotal: previousTotal),
+            _TotalCard(total: total, period: periodLabel, previousTotal: previousTotal, dateRangeLabel: dateRangeLabel),
             if (total > 0) ...[
               const SizedBox(height: 12),
               _PeriodSummaryCard(
@@ -213,19 +223,23 @@ class ReportsScreen extends ConsumerWidget {
     showDayTransactionsSheet(context, day, allTxns);
   }
 
-  String _fmtDate(DateTime d) =>
-      '${d.day} ${const ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.month - 1]}';
+  String _fmtDate(DateTime d) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
 }
 
 class _TotalCard extends StatelessWidget {
   final double total;
   final String period;
   final double previousTotal;
+  final String? dateRangeLabel;
 
   const _TotalCard({
     required this.total,
     required this.period,
     required this.previousTotal,
+    this.dateRangeLabel,
   });
 
   @override
@@ -243,12 +257,26 @@ class _TotalCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              period,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.grey.shade600),
+            Row(
+              children: [
+                Text(
+                  period,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: Colors.grey.shade600),
+                ),
+                if (dateRangeLabel != null) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '· $dateRangeLabel',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Colors.grey.shade500),
+                  ),
+                ],
+              ],
             ),
             const SizedBox(height: 4),
             Text(
