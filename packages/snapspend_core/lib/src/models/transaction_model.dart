@@ -121,7 +121,9 @@ class TransactionModel extends Equatable {
       source: map['source'] as String? ?? 'manual',
       flaggedForReview: map['flaggedForReview'] as bool? ?? false,
       createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: DateTime.parse(map['updatedAt'] as String),
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'] as String)
+          : DateTime.parse(map['createdAt'] as String),
     );
   }
 
