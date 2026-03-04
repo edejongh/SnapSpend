@@ -22,12 +22,8 @@ final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
     final existingIds = {for (final t in existing) t.txnId};
     final incomingIds = {for (final t in incoming) t.txnId};
 
-    for (final txn in incoming) {
-      await hive.saveTransaction(txn);
-    }
-
-    // Don't delete transactions that are pending a Firestore write —
-    // they exist in Hive only because the write hasn't been replayed yet.
+    // Fetch pending ops first — we must not overwrite local edits that
+    // haven't been flushed to Firestore yet (e.g. after a network blip).
     final pendingOps = await hive.getPendingOps();
     final pendingSaveIds = pendingOps.values
         .where((op) => op['type'] == 'saveTransaction')
@@ -35,6 +31,16 @@ final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
             Map<String, dynamic>.from(op['data'] as Map)['txnId'] as String)
         .toSet();
 
+    for (final txn in incoming) {
+      // Skip overwriting a transaction that has a locally queued save —
+      // the local version is newer than what Firestore is reporting.
+      if (!pendingSaveIds.contains(txn.txnId)) {
+        await hive.saveTransaction(txn);
+      }
+    }
+
+    // Don't delete transactions that are pending a Firestore write —
+    // they exist in Hive only because the write hasn't been replayed yet.
     for (final id in existingIds.difference(incomingIds)) {
       if (!pendingSaveIds.contains(id)) {
         await hive.deleteTransaction(id);
