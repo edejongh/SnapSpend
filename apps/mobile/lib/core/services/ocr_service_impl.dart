@@ -59,32 +59,82 @@ class OcrServiceImpl implements OcrService {
     return null;
   }
 
+  static const _monthNames = {
+    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+    'january': 1, 'february': 2, 'march': 3, 'april': 4, 'june': 6,
+    'july': 7, 'august': 8, 'september': 9, 'october': 10,
+    'november': 11, 'december': 12,
+  };
+
   DateTime? _extractDate(String text) {
-    final patterns = [
-      RegExp(r'(\d{2})[/\-.](\d{2})[/\-.](\d{4})'),
-      RegExp(r'(\d{4})[/\-.](\d{2})[/\-.](\d{2})'),
+    // Pattern 1: DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+    // Pattern 2: YYYY/MM/DD or YYYY-MM-DD
+    // Pattern 3: DD/MM/YY (2-digit year)
+    // Pattern 4: DD MMM YYYY or DD MMMM YYYY (e.g. "15 Feb 2026")
+    // Pattern 5: MMM DD, YYYY or MMMM DD, YYYY (e.g. "Feb 15, 2026")
+    final numericPatterns = [
+      (RegExp(r'(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})'), false),
+      (RegExp(r'(\d{4})[/\-.](\d{2})[/\-.](\d{2})'), true),
+      (RegExp(r'(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2})\b'), false),
     ];
-    for (final pattern in patterns) {
+
+    for (final (pattern, yearFirst) in numericPatterns) {
       final match = pattern.firstMatch(text);
-      if (match != null) {
-        try {
-          if (match.group(1)!.length == 4) {
-            return DateTime(
-              int.parse(match.group(1)!),
-              int.parse(match.group(2)!),
-              int.parse(match.group(3)!),
-            );
-          }
-          return DateTime(
-            int.parse(match.group(3)!),
-            int.parse(match.group(2)!),
-            int.parse(match.group(1)!),
-          );
-        } catch (_) {
-          continue;
+      if (match == null) continue;
+      try {
+        int year, month, day;
+        if (yearFirst) {
+          year = int.parse(match.group(1)!);
+          month = int.parse(match.group(2)!);
+          day = int.parse(match.group(3)!);
+        } else {
+          day = int.parse(match.group(1)!);
+          month = int.parse(match.group(2)!);
+          year = int.parse(match.group(3)!);
+          if (year < 100) year += 2000;
         }
+        if (month < 1 || month > 12 || day < 1 || day > 31) continue;
+        return DateTime(year, month, day);
+      } catch (_) {
+        continue;
       }
     }
+
+    // Text-month patterns
+    final textPatterns = [
+      RegExp(r'(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})', caseSensitive: false),
+      RegExp(r'([A-Za-z]+)\s+(\d{1,2})[,\s]+(\d{4})', caseSensitive: false),
+    ];
+
+    for (final pattern in textPatterns) {
+      final match = pattern.firstMatch(text);
+      if (match == null) continue;
+      try {
+        int day, month, year;
+        final g1 = match.group(1)!;
+        final g2 = match.group(2)!;
+        final g3 = match.group(3)!;
+        if (_monthNames.containsKey(g2.toLowerCase())) {
+          // DD MMM YYYY
+          day = int.parse(g1);
+          month = _monthNames[g2.toLowerCase()]!;
+          year = int.parse(g3);
+        } else if (_monthNames.containsKey(g1.toLowerCase())) {
+          // MMM DD YYYY
+          month = _monthNames[g1.toLowerCase()]!;
+          day = int.parse(g2);
+          year = int.parse(g3);
+        } else {
+          continue;
+        }
+        if (day < 1 || day > 31) continue;
+        return DateTime(year, month, day);
+      } catch (_) {
+        continue;
+      }
+    }
+
     return null;
   }
 
