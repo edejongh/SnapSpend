@@ -279,6 +279,7 @@ class TransactionDetailSheet extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 12),
+          // Primary actions — Edit and Delete get equal full-width buttons
           Row(
             children: [
               Expanded(
@@ -290,11 +291,36 @@ class TransactionDetailSheet extends ConsumerWidget {
                   icon: const Icon(Icons.edit_outlined, size: 18),
                   label: const Text('Edit'),
                   style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 40),
+                    minimumSize: const Size(0, 44),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _confirmDelete(context, ref, t),
+                  icon: Icon(Icons.delete_outline,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.error),
+                  label: Text('Delete',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error)),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 44),
+                    side: BorderSide(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .error
+                            .withValues(alpha: 0.5)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Secondary actions — Duplicate and Share
+          Row(
+            children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _duplicateTransaction(context, ref, t),
@@ -306,30 +332,14 @@ class TransactionDetailSheet extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: () => _shareTransaction(t, category?.name),
-                icon: const Icon(Icons.share_outlined, size: 18),
-                label: const Text('Share'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 40),
-                ),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: () => _confirmDelete(context, ref, t),
-                icon: Icon(Icons.delete_outline,
-                    size: 18,
-                    color: Theme.of(context).colorScheme.error),
-                label: Text('Delete',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.error)),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 40),
-                  side: BorderSide(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .error
-                          .withValues(alpha: 0.5)),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _shareTransaction(t, category?.name),
+                  icon: const Icon(Icons.share_outlined, size: 18),
+                  label: const Text('Share'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                  ),
                 ),
               ),
             ],
